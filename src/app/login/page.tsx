@@ -59,14 +59,13 @@ export default function LoginPage() {
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
               Usuario
-            </label>
-            <input
+            </label>            <input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="sebastián o yhunksu"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+              placeholder="username"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors text-gray-900 placeholder-gray-400"
               required
             />
           </div>
@@ -74,14 +73,13 @@ export default function LoginPage() {
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Contraseña
-            </label>
-            <input
+            </label>            <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors text-gray-900 placeholder-gray-400"
               required
             />
           </div>
@@ -97,18 +95,8 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-pink-500 to-indigo-500 text-white py-3 px-4 rounded-lg font-medium hover:from-pink-600 hover:to-indigo-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-          </button>
+            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}          </button>
         </form>
-
-        {/* Help */}
-        <div className="mt-6 text-center">
-          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-            <p className="font-medium mb-1">Credenciales de acceso:</p>
-            <p>Usuario: <span className="font-mono">sebastián</span> o <span className="font-mono">yhunksu</span></p>
-            <p>Contraseña: <span className="font-mono">sebyhun2025</span></p>
-          </div>
-        </div>
       </div>
     </div>
   );
