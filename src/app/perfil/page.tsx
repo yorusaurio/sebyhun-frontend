@@ -98,9 +98,64 @@ export default function PerfilPage() {
     rachaActual: 0,
     puntosAmor: 0
   });
-
   const [showAchievements, setShowAchievements] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'sunset' | 'galaxy' | 'spring' | 'ocean'>('sunset');
+
+  const calcularEstadisticas = useCallback((recuerdos: Recuerdo[]) => {
+    const ahora = new Date();
+    const lugares = new Set(recuerdos.map(r => r.ubicacion));
+    
+    // Contar recuerdos por mes
+    const recuerdosPorMes: { [key: string]: number } = {};
+    recuerdos.forEach(r => {
+      const mes = new Date(r.fecha).toLocaleDateString('es-ES', { month: 'long' });
+      recuerdosPorMes[mes] = (recuerdosPorMes[mes] || 0) + 1;
+    });
+
+    // Manejar array vacío para el mes con más recuerdos
+    const mesConMas = Object.entries(recuerdosPorMes).length > 0 
+      ? Object.entries(recuerdosPorMes).reduce((a, b) => 
+          recuerdosPorMes[a[0]] > recuerdosPorMes[b[0]] ? a : b
+        )[0] 
+      : "Enero";
+
+    // Contar lugares únicos
+    const lugaresPorFrecuencia: { [key: string]: number } = {};
+    recuerdos.forEach(r => {
+      lugaresPorFrecuencia[r.ubicacion] = (lugaresPorFrecuencia[r.ubicacion] || 0) + 1;
+    });
+
+    // Manejar array vacío para el lugar más visitado
+    const lugarMasVisitado = Object.entries(lugaresPorFrecuencia).length > 0
+      ? Object.entries(lugaresPorFrecuencia).reduce((a, b) => 
+          lugaresPorFrecuencia[a[0]] > lugaresPorFrecuencia[b[0]] ? a : b
+        )[0]
+      : "Madrid";
+
+    // Calcular años juntos
+    const fechaRelacion = new Date(profile.fechaRelacion);
+    const añosJuntos = Math.floor((ahora.getTime() - fechaRelacion.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+
+    // Recuerdos este año
+    const recuerdosEsteAno = recuerdos.filter(r => 
+      new Date(r.fecha).getFullYear() === ahora.getFullYear()
+    ).length;
+
+    // Calcular racha y puntos
+    const rachaActual = Math.min(recuerdos.length, 30);
+    const puntosAmor = recuerdos.length * 10 + lugares.size * 25 + añosJuntos * 100;
+
+    setEstadisticas({
+      totalRecuerdos: recuerdos.length,
+      lugaresVisitados: lugares.size,
+      añosJuntos,
+      recuerdosEsteAno,
+      mesConMasRecuerdos: mesConMas,
+      lugarMasVisitado,
+      rachaActual,
+      puntosAmor
+    });
+  }, [profile.fechaRelacion]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -136,75 +191,9 @@ export default function PerfilPage() {
       setProfile(initialProfile);
       setTempProfile(initialProfile);
     }    // Cargar recuerdos para estadísticas
-    const savedRecuerdos = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-    
+    const savedRecuerdos = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');    
     // Calcular estadísticas
-    calcularEstadisticas(savedRecuerdos);  }, [session, status, router]);
-
-  const calcularEstadisticas = useCallback((recuerdos: Recuerdo[]) => {
-    const ahora = new Date();
-    const lugares = new Set(recuerdos.map(r => r.ubicacion));
-    
-    // Contar recuerdos por mes
-    const recuerdosPorMes: { [key: string]: number } = {};
-    recuerdos.forEach(r => {
-      const mes = new Date(r.fecha).toLocaleDateString('es-ES', { month: 'long' });
-      recuerdosPorMes[mes] = (recuerdosPorMes[mes] || 0) + 1;
-    });
-
-    // Manejar array vacío para el mes con más recuerdos
-    const mesConMas = Object.entries(recuerdosPorMes).length > 0 
-      ? Object.entries(recuerdosPorMes).reduce((a, b) => 
-          recuerdosPorMes[a[0]] > recuerdosPorMes[b[0]] ? a : b
-        )[0] 
-      : "Enero";
-
-    // Lugar más visitado
-    const lugarCount: { [key: string]: number } = {};
-    recuerdos.forEach(r => {
-      lugarCount[r.ubicacion] = (lugarCount[r.ubicacion] || 0) + 1;
-    });
-
-    // Manejar array vacío para el lugar más visitado
-    const lugarMasVisitado = Object.entries(lugarCount).length > 0
-      ? Object.entries(lugarCount).reduce((a, b) => 
-          lugarCount[a[0]] > lugarCount[b[0]] ? a : b
-        )[0]
-      : "Nuestro lugar especial";
-
-    // Años juntos (si hay fecha de relación)
-    let añosJuntos = 0;
-    if (profile.fechaRelacion) {
-      const inicioRelacion = new Date(profile.fechaRelacion);
-      añosJuntos = Math.floor((ahora.getTime() - inicioRelacion.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
-    }
-
-    // Recuerdos este año
-    const recuerdosEsteAno = recuerdos.filter(r => 
-      new Date(r.fecha).getFullYear() === ahora.getFullYear()
-    ).length;
-
-    // Puntos de amor (fórmula mágica)
-    const puntosAmor = Math.floor(
-      (recuerdos.length * 10) + 
-      (lugares.size * 25) + 
-      (añosJuntos * 100) + 
-      (recuerdosEsteAno * 5)
-    );
-
-    // Racha actual (días consecutivos con actividad)
-    const rachaActual = Math.floor(Math.random() * 30) + 1; // Simulado por ahora
-
-    setEstadisticas({
-      totalRecuerdos: recuerdos.length,
-      lugaresVisitados: lugares.size,
-      añosJuntos,
-      recuerdosEsteAno,
-      mesConMasRecuerdos: mesConMas,
-      lugarMasVisitado,
-      rachaActual,      puntosAmor
-    });
-  }, [setEstadisticas]);
+    calcularEstadisticas(savedRecuerdos);  }, [session, status, router, calcularEstadisticas]);
 
   const handleSaveProfile = () => {
     localStorage.setItem('sebyhun-profile', JSON.stringify(tempProfile));
@@ -512,7 +501,7 @@ export default function PerfilPage() {
                     <Rainbow className="h-4 w-4 text-pink-500" />
                     Nuestra frase
                   </div>
-                  <div className="text-gray-600 italic">"{profile.fraseFavorita}"</div>
+                  <div className="text-gray-600 italic">&ldquo;{profile.fraseFavorita}&rdquo;</div>
                 </div>
               )}
             </div>

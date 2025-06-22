@@ -462,10 +462,9 @@ export default function NuevoLugar() {
 
           {/* Mensaje inspiracional */}
           <div className="text-center pt-6">
-            <div className="bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 rounded-2xl p-6 shadow-lg">
-              <p className="text-gray-700 italic leading-relaxed">
-                "                &ldquo;Los recuerdos son los tesoros más preciados que podemos guardar. 
-                Cada momento compartido se convierte en una historia que atesoraremos para siempre&rdquo;" 
+            <div className="bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 rounded-2xl p-6 shadow-lg">              <p className="text-gray-700 italic leading-relaxed">
+                &ldquo;Los recuerdos son los tesoros más preciados que podemos guardar. 
+                Cada momento compartido se convierte en una historia que atesoraremos para siempre&rdquo;
                 <span className="text-pink-500">💕</span>
               </p>
             </div>
