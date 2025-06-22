@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Heart, MapPin, Plus, Calendar, Sparkles, Edit3, Trash2, X, Clock, Camera, Star, BookOpen } from "lucide-react";
+import { Heart, MapPin, Plus, Calendar, Sparkles, Edit3, Trash2, X, Camera, Star, BookOpen } from "lucide-react";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -186,7 +186,7 @@ export default function HomeRecuerdos() {
               
               <div className="bg-gradient-to-r from-pink-100 to-purple-100 rounded-2xl p-4 mb-6">
                 <p className="text-pink-700 italic text-sm">
-                  "Cada gran historia de amor comienza con un solo momento especial" 💕
+                  &ldquo;Cada gran historia de amor comienza con un solo momento especial&rdquo; 💕
                 </p>
               </div>
               
@@ -341,7 +341,7 @@ export default function HomeRecuerdos() {
 
                 <div className="text-center">
                   <p className="text-sm text-gray-500 italic">
-                    "Cada momento contigo es un recuerdo que quiero atesorar para siempre" 💕
+                    &ldquo;Cada momento contigo es un recuerdo que quiero atesorar para siempre&rdquo; 💕
                   </p>
                 </div>
               </div>

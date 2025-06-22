@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { 
   Heart, 
   MapPin, 
@@ -59,25 +59,17 @@ export default function CalendarioPage() {
     if (!session) {
       router.push("/login");
       return;
-    }
-
-    // Cargar recuerdos del localStorage
+    }    // Cargar recuerdos del localStorage
     const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
     setRecuerdos(recuerdosGuardados);
   }, [session, status, router]);
 
-  useEffect(() => {
-    generateCalendarDays();
-  }, [currentDate, recuerdos]);
-
-  const generateCalendarDays = () => {
+  const generateCalendarDays = useCallback(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
     // Primer día del mes
     const firstDay = new Date(year, month, 1);
-    // Último día del mes
-    const lastDay = new Date(year, month + 1, 0);
     
     // Día de la semana del primer día (0 = domingo)
     const startDate = new Date(firstDay);
@@ -106,10 +98,13 @@ export default function CalendarioPage() {
         isCurrentMonth,
         recuerdos: dayRecuerdos
       });
-    }
-    
+    }    
     setCalendarDays(days);
-  };
+  }, [currentDate, recuerdos]);
+
+  useEffect(() => {
+    generateCalendarDays();
+  }, [generateCalendarDays]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
@@ -632,7 +627,7 @@ export default function CalendarioPage() {
 
                 <div className="text-center">
                   <p className="text-sm text-gray-500 italic">
-                    "Cada momento contigo es un recuerdo que quiero atesorar para siempre" 💕
+                    &ldquo;Cada momento contigo es un recuerdo que quiero atesorar para siempre&rdquo; 💕
                   </p>
                 </div>
               </div>

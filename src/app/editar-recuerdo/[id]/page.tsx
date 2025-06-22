@@ -42,11 +42,9 @@ export default function EditarRecuerdo() {
     if (!session) {
       router.push("/login");
       return;
-    }
-
-    // Cargar el recuerdo a editar
+    }    // Cargar el recuerdo a editar
     const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-    const recuerdo = recuerdosGuardados.find((r: any) => r.id === parseInt(recuerdoId));
+    const recuerdo = recuerdosGuardados.find((r: { id: number }) => r.id === parseInt(recuerdoId));
     
     if (!recuerdo) {
       router.push("/home");
@@ -149,7 +147,7 @@ export default function EditarRecuerdo() {
       
       // Actualizar el recuerdo
       const recuerdosExistentes = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-      const updatedRecuerdos = recuerdosExistentes.map((r: any) => {
+      const updatedRecuerdos = recuerdosExistentes.map((r: { id: number; [key: string]: unknown }) => {
         if (r.id === parseInt(recuerdoId)) {
           return {
             ...r,

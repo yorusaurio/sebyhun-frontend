@@ -170,7 +170,7 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
 
     console.log('🏁 Llamando a initMap()');
     initMap();
-  }, [isMounted]);
+  }, [isMounted, locations]);
 
   // Función para procesar ubicaciones (con useCallback para evitar recreaciones innecesarias)
   const processLocations = useCallback(async () => {
@@ -268,11 +268,10 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
           console.log(`🎧 Agregando event listeners para "${location.ubicacion}"`);
           // Event listeners
           marker.addListener('click', () => {
-            console.log(`🖱️ Click en marcador: "${location.ubicacion}"`);
-            // Cerrar cualquier info window abierta
+            console.log(`🖱️ Click en marcador: "${location.ubicacion}"`);            // Cerrar cualquier info window abierta
             newMarkers.forEach(m => {
-              if ((m as any).infoWindow) {
-                (m as any).infoWindow.close();
+              if ((m as google.maps.Marker & { infoWindow?: google.maps.InfoWindow }).infoWindow) {
+                (m as google.maps.Marker & { infoWindow: google.maps.InfoWindow }).infoWindow.close();
               }
             });
             
@@ -303,10 +302,8 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
               strokeColor: '#be185d',
               strokeWeight: 3,
             });
-          });
-
-          // Guardar referencia al info window
-          (marker as any).infoWindow = infoWindow;
+          });          // Guardar referencia al info window
+          (marker as google.maps.Marker & { infoWindow: google.maps.InfoWindow }).infoWindow = infoWindow;
           
           newMarkers.push(marker);
           bounds.extend(position);
@@ -378,7 +375,7 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
     }
 
     processLocations();
-  }, [map, geocoder, locations, onLocationClick, isMounted, processLocations]);
+  }, [map, geocoder, locations, onLocationClick, isMounted, processLocations, markers]);
 
   // Resaltar ubicación seleccionada
   useEffect(() => {

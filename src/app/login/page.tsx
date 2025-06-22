@@ -32,8 +32,8 @@ export default function LoginPage() {
         if (session) {
           router.push("/home");
         }
-      }
-    } catch (error) {
+      }    } catch (err) {
+      console.error('Login error:', err);
       setError("Error al iniciar sesión");
     } finally {
       setIsLoading(false);

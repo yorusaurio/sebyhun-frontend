@@ -311,7 +311,7 @@ export default function MapaPage() {
               
               <div className="bg-gradient-to-r from-pink-100 to-purple-100 rounded-2xl p-4 mb-6">
                 <p className="text-pink-700 italic text-sm">
-                  "El mundo es un libro y aquellos que no viajan leen solo una página" 💕
+                  &ldquo;El mundo es un libro y aquellos que no viajan leen solo una página&rdquo; 💕
                 </p>
               </div>
               
@@ -343,7 +343,7 @@ export default function MapaPage() {
                       <h4 className="font-semibold text-blue-800 mb-2">📝 Pasos rápidos:</h4>
                       <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
                         <li>Ve a <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">Google Cloud Console</a></li>
-                        <li>Habilita las APIs de "Maps JavaScript" y "Geocoding"</li>
+                        <li>Habilita las APIs de &ldquo;Maps JavaScript&rdquo; y &ldquo;Geocoding&rdquo;</li>
                         <li>Crea una clave de API</li>
                         <li>Cópiala en tu archivo <code className="bg-blue-100 px-1 rounded text-xs">.env.local</code></li>
                       </ol>
@@ -475,7 +475,7 @@ export default function MapaPage() {
                   
                   <div className="space-y-3">
                     {/* Recuerdos más recientes */}
-                    {location.recuerdos.slice(0, viewMode === 'list' ? 2 : 3).map((recuerdo, idx) => (
+                    {location.recuerdos.slice(0, viewMode === 'list' ? 2 : 3).map((recuerdo) => (
                       <div key={recuerdo.id} className="flex items-center gap-3 text-sm">
                         <div className="w-2 h-2 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full flex-shrink-0"></div>
                         <span className="text-gray-700 line-clamp-1 flex-1">{recuerdo.titulo}</span>
@@ -717,7 +717,7 @@ export default function MapaPage() {
 
                 <div className="text-center">
                   <p className="text-sm text-gray-500 italic">
-                    "Cada lugar visitado contigo se convierte en un hogar para mi corazón" 💕
+                    &ldquo;Cada lugar visitado contigo se convierte en un hogar para mi corazón&rdquo; 💕
                   </p>
                 </div>
               </div>

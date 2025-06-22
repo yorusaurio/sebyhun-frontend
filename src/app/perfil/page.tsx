@@ -2,10 +2,9 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { 
   Heart, 
-  Camera, 
   Edit3, 
   Save, 
   X, 
@@ -15,21 +14,16 @@ import {
   Star,
   Gift,
   Users,
-  Clock,
   Flame,
   Crown,
-  Badge,
   Award,
   Zap,
   Moon,
   Sun,
   Music,
-  Coffee,
-  Cake,
   Flower,
   Rainbow,
   Gem,
-  Target,
   TrendingUp,
   Activity
 } from "lucide-react";
@@ -93,9 +87,7 @@ export default function PerfilPage() {
     fraseFavorita: "",
     suenoCompartido: ""
   });
-  
-  const [tempProfile, setTempProfile] = useState<UserProfile>(profile);
-  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+    const [tempProfile, setTempProfile] = useState<UserProfile>(profile);
   const [estadisticas, setEstadisticas] = useState<Estadisticas>({
     totalRecuerdos: 0,
     lugaresVisitados: 0,
@@ -143,16 +135,13 @@ export default function PerfilPage() {
       };
       setProfile(initialProfile);
       setTempProfile(initialProfile);
-    }
-
-    // Cargar recuerdos para estadísticas
+    }    // Cargar recuerdos para estadísticas
     const savedRecuerdos = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-    setRecuerdos(savedRecuerdos);
     
     // Calcular estadísticas
-    calcularEstadisticas(savedRecuerdos);
-  }, [session, status, router]);
-  const calcularEstadisticas = (recuerdos: Recuerdo[]) => {
+    calcularEstadisticas(savedRecuerdos);  }, [session, status, router]);
+
+  const calcularEstadisticas = useCallback((recuerdos: Recuerdo[]) => {
     const ahora = new Date();
     const lugares = new Set(recuerdos.map(r => r.ubicacion));
     
@@ -213,10 +202,9 @@ export default function PerfilPage() {
       recuerdosEsteAno,
       mesConMasRecuerdos: mesConMas,
       lugarMasVisitado,
-      rachaActual,
-      puntosAmor
+      rachaActual,      puntosAmor
     });
-  };
+  }, [setEstadisticas]);
 
   const handleSaveProfile = () => {
     localStorage.setItem('sebyhun-profile', JSON.stringify(tempProfile));
@@ -590,7 +578,7 @@ export default function PerfilPage() {
             ].map(theme => (
               <button
                 key={theme.key}
-                onClick={() => setCurrentTheme(theme.key as any)}
+                onClick={() => setCurrentTheme(theme.key as 'sunset' | 'galaxy' | 'spring' | 'ocean')}
                 className={`p-4 rounded-xl border-2 transition-all duration-300 ${
                   currentTheme === theme.key 
                     ? 'border-purple-500 bg-purple-50' 
