@@ -33,7 +33,7 @@ export default function LoginPage() {
           router.push("/home");
         }
       }    } catch (err) {
-      console.error('Login error:', err);
+      console.log('Login error:', err);
       setError("Error al iniciar sesión");
     } finally {
       setIsLoading(false);

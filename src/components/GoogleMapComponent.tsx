@@ -30,41 +30,37 @@ interface GoogleMapComponentProps {
 export default function GoogleMapComponent({ locations, onLocationClick, selectedLocation }: GoogleMapComponentProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-
   // useEffect para manejar el montaje del componente
   useEffect(() => {
-    console.log('🏗️ Componente montándose...');
+    console.log('🗺️ MAPA: Componente iniciándose...');
     setIsMounted(true);
     
     return () => {
-      console.log('🧹 Componente desmontándose...');
+      console.log('🗺️ MAPA: Componente desmontándose...');
       setIsMounted(false);
     };
   }, []);
-
   // Inicialización del mapa
   useEffect(() => {
     if (!isMounted) {
-      console.log('⏸️ Componente aún no montado, esperando...');
       return;
     }
 
-    console.log('🚀 GoogleMapComponent: useEffect iniciado');
-    console.log('📍 Locations recibidas:', locations);
-    console.log('🔑 API Key:', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'Configurada' : 'NO CONFIGURADA');
+    console.log('�️ MAPA: Iniciando carga...', {
+      locations: locations.length,
+      apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'SÍ' : 'NO'
+    });
     
     const waitForRef = () => {
       return new Promise<void>((resolve) => {
         const checkRef = () => {
           if (mapRef.current) {
-            console.log('✅ MapRef disponible');
             resolve();
           } else {
-            console.log('⏳ MapRef no disponible, reintentando en 50ms...');
             setTimeout(checkRef, 50);
           }
         };
@@ -73,33 +69,24 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
     };
 
     const initMap = async () => {
-      console.log('🗺️ Iniciando carga del mapa...');
-      
       try {
-        // Esperar a que el ref esté disponible
-        await waitForRef();
+        // Esperar a que el ref esté disponible        await waitForRef();
+        console.log('🗺️ MAPA: DOM listo, cargando Google Maps...');
         
-        console.log('🎯 MapRef confirmado, iniciando carga de Google Maps...');
-        
+        console.log('🗺️ MAPA: Creando Loader...');
         const loader = new Loader({
           apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
           version: 'weekly',
           libraries: ['places']
         });
+        console.log('🗺️ MAPA: Loader creado, iniciando carga...');
 
-        console.log('⚙️ Loader configurado:', {
-          apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'Presente' : 'Ausente',
-          version: 'weekly',
-          libraries: ['places']
-        });
-
-        console.log('📦 Cargando Google Maps API...');
         const google = await loader.load();
-        console.log('✅ Google Maps API cargada exitosamente:', google);
+        console.log('🗺️ MAPA: Google Maps API cargada exitosamente');
         
         // Verificar nuevamente que el ref esté disponible después de cargar la API
         if (!mapRef.current) {
-          console.error('❌ mapRef.current se volvió null después de cargar la API');
+          console.log('❌ mapRef.current se volvió null después de cargar la API');
           throw new Error('MapRef perdido después de cargar Google Maps API');
         }
 
@@ -142,78 +129,57 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
           zoomControlOptions: {
             position: google.maps.ControlPosition.RIGHT_BOTTOM
           }
-        });
-
-        console.log('🎨 Mapa creado con estilos personalizados:', mapInstance);
+        });        console.log('🗺️ MAPA: ✅ Creado exitosamente');
 
         const geocoderInstance = new google.maps.Geocoder();
-        console.log('📍 Geocoder creado:', geocoderInstance);
         
         setGeocoder(geocoderInstance);
         setMap(mapInstance);
         setIsLoading(false);
         
-        console.log('✅ Mapa inicializado correctamente');
-      } catch (error) {
-        console.error('💥 Error loading Google Maps:', error);
-        console.error('🔍 Detalles del error:', {
-          message: error instanceof Error ? error.message : 'Error desconocido',
-          stack: error instanceof Error ? error.stack : 'No stack trace',
-          name: error instanceof Error ? error.name : 'Unknown error',
-          error: error,
-          mapRefAvailable: mapRef.current !== null,
-          isMounted: isMounted
-        });
+        console.log('🗺️ MAPA: ✅ Configuración completada');
+      } catch (error) {        console.log('�️ MAPA: ❌ ERROR -', error instanceof Error ? error.message : error);
         setIsLoading(false);
       }
-    };
-
-    console.log('🏁 Llamando a initMap()');
-    initMap();
-  }, [isMounted, locations]);
-
-  // Función para procesar ubicaciones (con useCallback para evitar recreaciones innecesarias)
+    };    // Solo inicializar si no tenemos mapa aún
+    if (!map) {
+      // Timeout de seguridad por si algo falla
+      const timer = setTimeout(() => {
+        console.log('🗺️ MAPA: ⏰ Timeout - forzando fin de carga');
+        setIsLoading(false);
+      }, 15000); // 15 segundos
+      
+      initMap().finally(() => {
+        clearTimeout(timer);
+      });
+    }
+  }, [isMounted, map]); // Removido 'locations' para evitar loop infinito
   const processLocations = useCallback(async () => {
     if (!map || !geocoder || !isMounted) {
-      console.log('⏸️ Saliendo temprano - requisitos no cumplidos:', {
-        map: !!map,
-        geocoder: !!geocoder,
-        isMounted: isMounted
-      });
       return;
     }
 
-    console.log('🚀 Iniciando procesamiento de ubicaciones...');
+    console.log('�️ MARCADORES: Procesando', locations.length, 'ubicaciones...');
     const newMarkers: google.maps.Marker[] = [];
     const bounds = new google.maps.LatLngBounds();
 
     // Procesar cada ubicación secuencialmente para evitar problemas con async/await
     for (let index = 0; index < locations.length; index++) {
       const location = locations[index];
-      console.log(`📍 Procesando ubicación ${index + 1}/${locations.length}: "${location.ubicacion}"`);
-      console.log(`   - Recuerdos: ${location.recuerdos.length}`);
       
       try {
         // Verificar que el componente siga montado
         if (!isMounted) {
-          console.log('⚠️ Componente desmontado durante el procesamiento, abortando...');
           break;
         }
 
         // Geocodificar la ubicación
-        console.log(`🔍 Geocodificando: "${location.ubicacion}"`);
         const response = await geocoder.geocode({ address: location.ubicacion });
-        console.log(`📍 Respuesta de geocoding para "${location.ubicacion}":`, response);
         
         if (response.results && response.results.length > 0) {
           const position = response.results[0].geometry.location;
-          console.log(`✅ Posición encontrada para "${location.ubicacion}":`, {
-            lat: position.lat(),
-            lng: position.lng()
-          });
           
           // Crear marcador personalizado
-          console.log(`🎯 Creando marcador para "${location.ubicacion}"`);
           const marker = new google.maps.Marker({
             position: position,
             map: map,
@@ -229,10 +195,7 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
             zIndex: location.recuerdos.length // Los lugares con más recuerdos aparecen encima
           });
 
-          console.log(`🎨 Marcador creado para "${location.ubicacion}":`, marker);
-
           // Crear info window personalizada
-          console.log(`💬 Creando info window para "${location.ubicacion}"`);
           const infoWindow = new google.maps.InfoWindow({
             content: `
               <div style="padding: 10px; font-family: ui-sans-serif, system-ui, sans-serif;">
@@ -263,25 +226,20 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
                 </div>
               </div>
             `
-          });
-
-          console.log(`🎧 Agregando event listeners para "${location.ubicacion}"`);
-          // Event listeners
+          });          // Event listeners
           marker.addListener('click', () => {
-            console.log(`🖱️ Click en marcador: "${location.ubicacion}"`);            // Cerrar cualquier info window abierta
+            // Cerrar cualquier info window abierta
             newMarkers.forEach(m => {
               if ((m as google.maps.Marker & { infoWindow?: google.maps.InfoWindow }).infoWindow) {
                 (m as google.maps.Marker & { infoWindow: google.maps.InfoWindow }).infoWindow.close();
               }
             });
             
-            console.log(`💬 Abriendo info window para "${location.ubicacion}"`);
             infoWindow.open(map, marker);
             onLocationClick(location);
           });
 
           marker.addListener('mouseover', () => {
-            console.log(`🖱️ Hover sobre marcador: "${location.ubicacion}"`);
             marker.setIcon({
               path: google.maps.SymbolPath.CIRCLE,
               scale: 18,
@@ -293,7 +251,6 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
           });
 
           marker.addListener('mouseout', () => {
-            console.log(`🖱️ Mouse out de marcador: "${location.ubicacion}"`);
             marker.setIcon({
               path: google.maps.SymbolPath.CIRCLE,
               scale: 15,
@@ -307,94 +264,59 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
           
           newMarkers.push(marker);
           bounds.extend(position);
-          console.log(`✅ Marcador agregado exitosamente para "${location.ubicacion}"`);
         } else {
-          console.warn(`⚠️ No se encontraron resultados de geocoding para: "${location.ubicacion}"`);
+          console.log('🗺️ MARCADORES: ⚠️ Sin resultados para:', location.ubicacion);
         }
-      } catch (error) {
-        console.error(`❌ Error geocoding "${location.ubicacion}":`, error);
-        console.error('🔍 Detalles del error:', {
-          message: error instanceof Error ? error.message : 'Error desconocido',
-          location: location.ubicacion,
-          error: error
-        });
+      } catch (error) {        console.log('🗺️ MARCADORES: ❌ Error en', location.ubicacion, '-', error instanceof Error ? error.message : error);
       }
     }
 
     // Verificar nuevamente que el componente siga montado antes de actualizar el estado
     if (!isMounted) {
-      console.log('⚠️ Componente desmontado, no actualizando marcadores');
       return;
     }
 
-    console.log(`📍 Estableciendo ${newMarkers.length} marcadores`);
     setMarkers(newMarkers);
 
     // Ajustar el mapa para mostrar todos los marcadores
     if (newMarkers.length > 0) {
-      console.log(`🎯 Ajustando vista del mapa para ${newMarkers.length} marcadores`);
       if (newMarkers.length === 1) {
-        console.log('📍 Un solo marcador - centrando y estableciendo zoom 12');
         map.setCenter(bounds.getCenter());
         map.setZoom(12);
       } else {
-        console.log('📍 Múltiples marcadores - ajustando bounds');
         map.fitBounds(bounds);
         map.setZoom(Math.min(map.getZoom() || 10, 12));
       }
-      console.log('✅ Vista del mapa ajustada');
+      console.log('🗺️ MARCADORES: ✅', newMarkers.length, 'marcadores creados');
     } else {
-      console.log('⚠️ No hay marcadores para mostrar');
+      console.log('🗺️ MARCADORES: ⚠️ Sin marcadores para mostrar');
     }
   }, [map, geocoder, locations, onLocationClick, isMounted]);
-
   // useEffect para crear marcadores
   useEffect(() => {
-    console.log('🎯 useEffect para marcadores iniciado');
-    console.log('🗺️ Estado del mapa:', map ? 'Presente' : 'No presente');
-    console.log('📍 Estado del geocoder:', geocoder ? 'Presente' : 'No presente');
-    console.log('📊 Locations para procesar:', locations.length);
-    
     if (!map || !geocoder || !isMounted) {
-      console.log('⏸️ Saliendo temprano - requisitos no cumplidos:', {
-        map: !!map,
-        geocoder: !!geocoder,
-        isMounted: isMounted
-      });
       return;
     }
 
     // Limpiar marcadores existentes
-    console.log('🧹 Limpiando marcadores existentes:', markers.length);
     markers.forEach(marker => marker.setMap(null));
     setMarkers([]);
 
     if (locations.length === 0) {
-      console.log('📍 No hay ubicaciones para procesar');
       return;
-    }
-
-    processLocations();
-  }, [map, geocoder, locations, onLocationClick, isMounted, processLocations, markers]);
+    }    processLocations();
+  }, [map, geocoder, locations, processLocations]); // Removido markers, onLocationClick, isMounted para evitar loops
 
   // Resaltar ubicación seleccionada
   useEffect(() => {
-    console.log('🎯 useEffect para ubicación seleccionada');
-    console.log('📍 Ubicación seleccionada:', selectedLocation?.ubicacion || 'Ninguna');
-    console.log('🎯 Marcadores disponibles:', markers.length);
-    
     if (!selectedLocation || markers.length === 0) {
-      console.log('⏸️ Saliendo temprano - no hay ubicación seleccionada o marcadores');
       return;
     }
 
-    console.log('🔍 Buscando marcador para ubicación seleccionada...');
-    markers.forEach((marker, index) => {
+    markers.forEach((marker) => {
       const isSelected = marker.getTitle() === selectedLocation.ubicacion;
-      console.log(`📍 Marcador ${index + 1}: "${marker.getTitle()}" - ${isSelected ? 'SELECCIONADO' : 'No seleccionado'}`);
       
       if (isSelected) {
-        console.log(`✅ Aplicando estilo de selección a: "${marker.getTitle()}"`);
         marker.setIcon({
           path: google.maps.SymbolPath.CIRCLE,
           scale: 20,
@@ -406,11 +328,9 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
         
         // Opcional: centrar el mapa en el marcador seleccionado
         if (map) {
-          console.log(`🎯 Centrando mapa en marcador seleccionado: "${marker.getTitle()}"`);
           map.panTo(marker.getPosition()!);
         }
       } else {
-        console.log(`🔄 Restaurando estilo normal a: "${marker.getTitle()}"`);
         const location = locations.find(l => l.ubicacion === marker.getTitle());
         marker.setIcon({
           path: google.maps.SymbolPath.CIRCLE,
@@ -422,29 +342,41 @@ export default function GoogleMapComponent({ locations, onLocationClick, selecte
         });
       }
     });
-    console.log('✅ Actualización de marcadores completada');
   }, [selectedLocation, markers, locations, map]);
-
   if (isLoading) {
-    console.log('⏳ Mostrando pantalla de carga del mapa');
     return (
       <div className="w-full h-[500px] bg-gradient-to-br from-pink-50 to-purple-50 rounded-2xl flex items-center justify-center border border-pink-200">
-        <div className="text-center p-8">
+        <div className="text-center p-8 max-w-lg">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium mb-2">Cargando mapa romántico...</p>
           <p className="text-sm text-gray-500 mb-4">Preparando nuestros recuerdos 💕</p>
           
-          {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY === 'tu_google_maps_api_key_aqui' ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4 text-left max-w-md">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                <h4 className="font-semibold text-yellow-800 text-sm">Configuración necesaria</h4>
-              </div>
-              <p className="text-yellow-700 text-xs leading-relaxed">
-                Para ver el mapa interactivo, necesitas configurar tu API Key de Google Maps en el archivo <code className="bg-yellow-100 px-1 rounded text-xs">.env.local</code>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 text-left">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <h4 className="font-semibold text-blue-800 text-sm">Estado de carga</h4>
+            </div>
+            <div className="text-blue-700 text-xs space-y-1">
+              <p>✅ API Key: {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'Configurada' : '❌ NO configurada'}</p>
+              <p>✅ Componente: Iniciado</p>
+              <p>⏳ Google Maps API: Cargando...</p>
+              <p className="text-blue-600 mt-2 italic">
+                Si tarda más de 15 segundos, revisa la consola del navegador
               </p>
             </div>
-          ) : null}
+          </div>
+          
+          {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4 text-left">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                <h4 className="font-semibold text-yellow-800 text-sm">⚠️ API Key requerida</h4>
+              </div>
+              <p className="text-yellow-700 text-xs leading-relaxed">
+                Para ver el mapa interactivo, configura tu API Key de Google Maps en <code className="bg-yellow-100 px-1 rounded text-xs">.env.local</code>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
