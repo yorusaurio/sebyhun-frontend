@@ -33,10 +33,9 @@ export default function HomeRecuerdos() {
       return;
     }    // Cargar recuerdos del localStorage
     const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-    
-    // LOG: Verificar fechas al cargar en HOME
+      // LOG: Verificar fechas al cargar en HOME
     console.log('🏠 Cargando recuerdos en HOME - Total:', recuerdosGuardados.length);
-    recuerdosGuardados.forEach((recuerdo: any, index: number) => {
+    recuerdosGuardados.forEach((recuerdo: Recuerdo, index: number) => {
       console.log(`📅 Recuerdo ${index + 1}:`, {
         id: recuerdo.id,
         titulo: recuerdo.titulo,

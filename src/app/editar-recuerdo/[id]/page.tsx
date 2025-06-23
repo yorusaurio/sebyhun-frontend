@@ -237,10 +237,9 @@ export default function EditarRecuerdo() {
       
       console.log('💾 Guardando recuerdos actualizados en localStorage...');
       localStorage.setItem('sebyhun-recuerdos', JSON.stringify(updatedRecuerdos));
-      
-      // LOG: Verificar lo que se guardó
+        // LOG: Verificar lo que se guardó
       const recuerdoGuardado = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-      const recuerdoActualizado = recuerdoGuardado.find((r: any) => r.id === parseInt(recuerdoId));
+      const recuerdoActualizado = recuerdoGuardado.find((r: { id: number }) => r.id === parseInt(recuerdoId));
       console.log('📋 Recuerdo actualizado guardado:');
       console.log('  • Fecha guardada:', recuerdoActualizado?.fecha);
       console.log('  • Objeto completo:', recuerdoActualizado);
