@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { readRecuerdos, writeRecuerdos, Recuerdo } from '@/lib/fileStorage';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
 // Actualizar un recuerdo por ID
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest, 
+  { params }: { params: { id: string } }
+) {
   const id = parseInt(params.id);
   const body = await request.json();
   const { userId, titulo, descripcion, ubicacion, fecha, imagen, latitud, longitud } = body;
@@ -34,7 +37,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // Eliminar un recuerdo por ID
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest, 
+  { params }: { params: { id: string } }
+) {
   const id = parseInt(params.id);
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
