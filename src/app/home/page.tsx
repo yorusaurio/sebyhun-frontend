@@ -7,6 +7,7 @@ import { Heart, MapPin, Plus, Calendar, Sparkles, Edit3, Trash2, X, Camera, Star
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { formatDateSafe, compareDates } from "@/utils/dateUtils";
 
 interface Recuerdo {
   id: number;
@@ -30,14 +31,24 @@ export default function HomeRecuerdos() {
     if (!session) {
       router.push("/login");
       return;
-    }
-
-    // Cargar recuerdos del localStorage
+    }    // Cargar recuerdos del localStorage
     const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
     
-    // Ordenar por fecha descendente
+    // LOG: Verificar fechas al cargar en HOME
+    console.log('🏠 Cargando recuerdos en HOME - Total:', recuerdosGuardados.length);
+    recuerdosGuardados.forEach((recuerdo: any, index: number) => {
+      console.log(`📅 Recuerdo ${index + 1}:`, {
+        id: recuerdo.id,
+        titulo: recuerdo.titulo,
+        fecha: recuerdo.fecha,
+        fechaTipo: typeof recuerdo.fecha,
+        fechaComoDate: new Date(recuerdo.fecha),
+        fechaFormateada: new Date(recuerdo.fecha).toLocaleDateString('es-ES')
+      });
+    });
+      // Ordenar por fecha descendente usando la función utilitaria segura
     recuerdosGuardados.sort((a: Recuerdo, b: Recuerdo) => 
-      new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+      compareDates(b.fecha, a.fecha)
     );
     
     setRecuerdos(recuerdosGuardados);
@@ -60,14 +71,9 @@ export default function HomeRecuerdos() {
 
   const closeModal = () => {
     setSelectedRecuerdo(null);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+  };  const formatDate = (dateString: string) => {
+    // Usar la función utilitaria segura
+    return formatDateSafe(dateString);
   };
 
   if (status === "loading") {

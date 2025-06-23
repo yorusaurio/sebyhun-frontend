@@ -7,6 +7,7 @@ import { Heart, MapPin, Upload, ArrowLeft, Save, X, Sparkles, Camera, Calendar }
 import Image from "next/image";
 import axios from "axios";
 import { Loader as GoogleMapsLoader } from "@googlemaps/js-api-loader";
+import { getCurrentLocalDateString } from "@/utils/dateUtils";
 
 interface FormData {
   titulo: string;
@@ -19,15 +20,20 @@ interface FormData {
   longitud?: number;
 }
 
+// Función auxiliar para obtener la fecha local sin problemas de zona horaria
+const getCurrentLocalDate = (): string => {
+  // Usar la función utilitaria centralizada
+  return getCurrentLocalDateString();
+};
+
 export default function NuevoLugar() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
   const [formData, setFormData] = useState<FormData>({
     titulo: "",
     descripcion: "",
     ubicacion: "",
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: getCurrentLocalDate(),
     imagen: ""
   });
   
@@ -347,15 +353,24 @@ export default function NuevoLugar() {
     }
     
     setIsSubmitting(true);
-    
-    try {
+      try {
+      // LOG: Información detallada antes de procesar
+      console.log('💾 handleSubmit - Iniciando proceso de guardado:');
+      console.log('  • FormData antes de crear objeto:', formData);
+      console.log('  • Fecha original:', formData.fecha);
+      console.log('  • Tipo de fecha:', typeof formData.fecha);
+      console.log('  • Fecha convertida a Date:', new Date(formData.fecha));
+      console.log('  • ImageFile presente:', !!imageFile);
+      
       let imageUrl = formData.imagen;
       
       // Subir imagen si hay una nueva
       if (imageFile) {
+        console.log('🖼️ Subiendo imagen...');
         setIsUploading(true);
         imageUrl = await uploadImageToImgBB(imageFile);
         setIsUploading(false);
+        console.log('✅ Imagen subida:', imageUrl);
       }
         // Aquí normalmente guardarías en una base de datos
       // Por ahora simularemos el guardado en localStorage
@@ -369,13 +384,29 @@ export default function NuevoLugar() {
         fechaCreacion: new Date().toISOString()
       };
       
+      // LOG: Información del objeto que se guardará
+      console.log('📦 Objeto recuerdo creado:');
+      console.log('  • ID:', nuevoRecuerdo.id);
+      console.log('  • Fecha del recuerdo:', nuevoRecuerdo.fecha);
+      console.log('  • Fecha de creación:', nuevoRecuerdo.fechaCreacion);
+      console.log('  • Objeto completo:', nuevoRecuerdo);
+      
       // Obtener recuerdos existentes del localStorage
       const recuerdosExistentes = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
       recuerdosExistentes.push(nuevoRecuerdo);
       localStorage.setItem('sebyhun-recuerdos', JSON.stringify(recuerdosExistentes));
       
+      // LOG: Verificar lo que se guardó
+      const recuerdoGuardado = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
+      const ultimoRecuerdo = recuerdoGuardado[recuerdoGuardado.length - 1];
+      console.log('💾 Recuerdo guardado en localStorage:');
+      console.log('  • Fecha guardada:', ultimoRecuerdo?.fecha);
+      console.log('  • Objeto guardado completo:', ultimoRecuerdo);
+      
       // Simular delay de guardado
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('✅ Guardado completado, redirigiendo...');
       
       // Redirigir a home
       router.push('/home');
@@ -737,12 +768,21 @@ export default function NuevoLugar() {
                   <Calendar className="h-4 w-4 text-purple-500" />
                   Fecha del recuerdo *
                 </label>
-                <div className="relative">
-                  <input
+                <div className="relative">                  <input
                     id="fecha"
                     type="date"
                     value={formData.fecha}
-                    onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      console.log('📅 Cambio en campo fecha:');
+                      console.log('  • Valor anterior:', formData.fecha);
+                      console.log('  • Valor nuevo:', newValue);
+                      console.log('  • Tipo del valor nuevo:', typeof newValue);
+                      console.log('  • Fecha como Date object:', new Date(newValue));
+                      console.log('  • Timestamp actual:', Date.now());
+                      
+                      setFormData({ ...formData, fecha: newValue });
+                    }}
                     className="w-full px-4 py-4 pl-12 border-2 border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300 text-gray-900 bg-white/80"
                   />
                   <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-purple-400" />

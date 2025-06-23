@@ -25,6 +25,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import dynamic from 'next/dynamic';
+import { formatDateSafe, parseLocalDate, compareDates } from "@/utils/dateUtils";
 
 const GoogleMapComponent = dynamic(() => import("@/components/MapComponent"), {
   ssr: false,
@@ -112,21 +113,15 @@ export default function MapaPage() {
   const handleRecuerdoClick = (recuerdo: Recuerdo) => {
     setSelectedRecuerdo(recuerdo);
   };
-
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    return formatDateSafe(dateString);
   };
 
   const filteredLocations = locations.filter(location => {
     const matchesSearch = location.ubicacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          location.recuerdos.some(r => r.titulo.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesYear = filterByYear === 'all' || 
-                       location.recuerdos.some(r => new Date(r.fecha).getFullYear().toString() === filterByYear);
+      const matchesYear = filterByYear === 'all' || 
+                       location.recuerdos.some(r => parseLocalDate(r.fecha).getFullYear().toString() === filterByYear);
     
     return matchesSearch && matchesYear;
   });
@@ -134,7 +129,7 @@ export default function MapaPage() {
   const getYearsFromRecuerdos = () => {
     const years = new Set<string>();
     recuerdos.forEach(r => {
-      years.add(new Date(r.fecha).getFullYear().toString());
+      years.add(parseLocalDate(r.fecha).getFullYear().toString());
     });
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   };
@@ -203,7 +198,7 @@ export default function MapaPage() {
             <div className="bg-indigo-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
               <Globe className="h-6 w-6 text-indigo-600" />
             </div>
-            <div className="text-2xl font-bold text-indigo-600">{new Set(recuerdos.map(r => new Date(r.fecha).getFullYear())).size}</div>
+            <div className="text-2xl font-bold text-indigo-600">{new Set(recuerdos.map(r => parseLocalDate(r.fecha).getFullYear())).size}</div>
             <div className="text-sm text-gray-600">Años de Aventuras</div>
           </div>
           
@@ -487,7 +482,7 @@ export default function MapaPage() {
                         <div className="w-2 h-2 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full flex-shrink-0"></div>
                         <span className="text-gray-700 line-clamp-1 flex-1">{recuerdo.titulo}</span>
                         <span className="text-gray-500 text-xs">
-                          {new Date(recuerdo.fecha).getFullYear()}
+                          {parseLocalDate(recuerdo.fecha).getFullYear()}
                         </span>
                       </div>
                     ))}
@@ -505,7 +500,7 @@ export default function MapaPage() {
                       <span>Primer visita</span>
                       <span>
                         {formatDate(location.recuerdos.sort((a, b) => 
-                          new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+                          compareDates(a.fecha, b.fecha)
                         )[0].fecha)}
                       </span>
                     </div>                  </div>

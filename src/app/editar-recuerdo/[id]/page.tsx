@@ -46,21 +46,36 @@ export default function EditarRecuerdo() {
   const autocompleteInstanceRef = useRef<google.maps.places.Autocomplete | null>(null);
   // Bandera para evitar bucles infinitos de eventos
   const isHandlingPlaceSelection = useRef(false);
-
   useEffect(() => {
     if (status === "loading") return;
     
     if (!session) {
       router.push("/login");
       return;
-    }    // Cargar el recuerdo a editar
+    }
+
+    // LOG: Iniciando carga del recuerdo
+    console.log('📋 Cargando recuerdo para editar - ID:', recuerdoId);
+    
+    // Cargar el recuerdo a editar
     const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
+    console.log('💾 Recuerdos en localStorage:', recuerdosGuardados);
+    
     const recuerdo = recuerdosGuardados.find((r: { id: number }) => r.id === parseInt(recuerdoId));
     
     if (!recuerdo) {
+      console.error('❌ No se encontró el recuerdo con ID:', recuerdoId);
       router.push("/home");
       return;
-    }    setFormData({
+    }
+
+    // LOG: Datos del recuerdo encontrado
+    console.log('✅ Recuerdo encontrado:', recuerdo);
+    console.log('📅 Fecha del recuerdo:', recuerdo.fecha);
+    console.log('📅 Tipo de fecha:', typeof recuerdo.fecha);
+    console.log('📅 Fecha como Date object:', new Date(recuerdo.fecha));
+
+    setFormData({
       titulo: recuerdo.titulo,
       descripcion: recuerdo.descripcion,
       ubicacion: recuerdo.ubicacion,
@@ -70,6 +85,8 @@ export default function EditarRecuerdo() {
       latitud: recuerdo.latitud,
       longitud: recuerdo.longitud
     });
+    
+    console.log('📝 FormData configurado con fecha:', recuerdo.fecha);
     
     setImagePreview(recuerdo.imagen);
     setIsLoading(false);
@@ -172,21 +189,37 @@ export default function EditarRecuerdo() {
     }
     
     setIsSubmitting(true);
-    
-    try {
+      try {
+      // LOG: Información detallada antes de actualizar
+      console.log('💾 handleSubmit (EDITAR) - Iniciando actualización:');
+      console.log('  • FormData antes de actualizar:', formData);
+      console.log('  • Fecha a actualizar:', formData.fecha);
+      console.log('  • Tipo de fecha:', typeof formData.fecha);
+      console.log('  • Fecha convertida a Date:', new Date(formData.fecha));
+      console.log('  • Recuerdo ID:', recuerdoId);
+      
       let imageUrl = formData.imagen;
       
       // Subir imagen si hay una nueva
       if (imageFile) {
+        console.log('🖼️ Subiendo nueva imagen...');
         setIsUploading(true);
         imageUrl = await uploadImageToImgBB(imageFile);
         setIsUploading(false);
+        console.log('✅ Nueva imagen subida:', imageUrl);
       }
         // Actualizar el recuerdo
       const recuerdosExistentes = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
+      console.log('📦 Recuerdos existentes antes de actualizar:', recuerdosExistentes);
+      
       const updatedRecuerdos = recuerdosExistentes.map((r: { id: number; [key: string]: unknown }) => {
-        if (r.id === parseInt(recuerdoId)) {          // Guardar las coordenadas para una mejor integración con el mapa
-          return {
+        if (r.id === parseInt(recuerdoId)) {
+          console.log('🔄 Actualizando recuerdo ID:', r.id);
+          console.log('  • Fecha anterior:', r.fecha);
+          console.log('  • Fecha nueva:', formData.fecha);
+          
+          // Guardar las coordenadas para una mejor integración con el mapa
+          const recuerdoActualizado = {
             ...r,
             ...formData,
             imagen: imageUrl,
@@ -195,14 +228,27 @@ export default function EditarRecuerdo() {
             longitud: formData.longitud,
             fechaActualizacion: new Date().toISOString()
           };
+          
+          console.log('✅ Recuerdo actualizado:', recuerdoActualizado);
+          return recuerdoActualizado;
         }
         return r;
       });
       
+      console.log('💾 Guardando recuerdos actualizados en localStorage...');
       localStorage.setItem('sebyhun-recuerdos', JSON.stringify(updatedRecuerdos));
+      
+      // LOG: Verificar lo que se guardó
+      const recuerdoGuardado = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
+      const recuerdoActualizado = recuerdoGuardado.find((r: any) => r.id === parseInt(recuerdoId));
+      console.log('📋 Recuerdo actualizado guardado:');
+      console.log('  • Fecha guardada:', recuerdoActualizado?.fecha);
+      console.log('  • Objeto completo:', recuerdoActualizado);
       
       // Simular delay de guardado
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('✅ Actualización completada, redirigiendo...');
       
       // Redirigir a home
       router.push('/home');
@@ -220,8 +266,7 @@ export default function EditarRecuerdo() {
     setImageFile(null);
     setImagePreview("");
     setFormData({ ...formData, imagen: "" });
-  };
-  // Función mejorada para cerrar el dropdown de Google Places, memorizada para mayor estabilidad
+  };  // Función mejorada para cerrar el dropdown de Google Places, memorizada para mayor estabilidad
   const closeGooglePlacesDropdown = useCallback(() => {
     // Si ya estamos procesando una selección, no hacer nada para evitar bucles
     if (isHandlingPlaceSelection.current) {
@@ -243,7 +288,7 @@ export default function EditarRecuerdo() {
     
     // Un enfoque más suave sin cambios de foco agresivos
     document.body.click();
-  }, [isHandlingPlaceSelection]);
+  }, []);
   // Función mejorada para manejar cuando se selecciona un lugar, memorizada para mayor estabilidad
   const handlePlaceChanged = useCallback(() => {
     // Marcar que estamos procesando una selección para evitar bucles
@@ -706,12 +751,21 @@ export default function EditarRecuerdo() {
               <div>
                 <label htmlFor="fecha" className="block text-sm font-bold text-gray-900 mb-2">
                   Fecha *
-                </label>
-                <input
+                </label>                <input
                   id="fecha"
                   type="date"
                   value={formData.fecha}
-                  onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    console.log('📅 Cambio en campo fecha (EDITAR):');
+                    console.log('  • Valor anterior:', formData.fecha);
+                    console.log('  • Valor nuevo:', newValue);
+                    console.log('  • Tipo del valor nuevo:', typeof newValue);
+                    console.log('  • Fecha como Date object:', new Date(newValue));
+                    console.log('  • Timestamp actual:', Date.now());
+                    
+                    setFormData({ ...formData, fecha: newValue });
+                  }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-colors text-gray-900"
                 />
                 {errors.fecha && (
