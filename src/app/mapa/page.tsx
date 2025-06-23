@@ -24,7 +24,14 @@ import {
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import GoogleMapComponent from "@/components/GoogleMapComponent";
+import dynamic from 'next/dynamic';
+
+const GoogleMapComponent = dynamic(() => import("@/components/MapComponent"), {
+  ssr: false,
+  loading: () => <div className="w-full h-[500px] bg-pink-50 rounded-2xl flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+  </div>
+});
 
 interface Recuerdo {
   id: number;

@@ -2,10 +2,11 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Heart, MapPin, Upload, ArrowLeft, Save, X, Sparkles, Camera, Calendar } from "lucide-react";
 import Image from "next/image";
 import axios from "axios";
+import { Loader as GoogleMapsLoader } from "@googlemaps/js-api-loader";
 
 interface FormData {
   titulo: string;
@@ -13,6 +14,9 @@ interface FormData {
   ubicacion: string;
   fecha: string;
   imagen: string;
+  // Nuevos campos para datos de geolocalización
+  latitud?: number;
+  longitud?: number;
 }
 
 export default function NuevoLugar() {
@@ -32,6 +36,213 @@ export default function NuevoLugar() {
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Google Places API
+  const autocompleteInputRef = useRef<HTMLInputElement>(null);
+  const [placesLoading, setPlacesLoading] = useState(false);
+  const [placesApiLoaded, setPlacesApiLoaded] = useState(false);
+    // Referencia para la instancia de autocompletado
+  const autocompleteInstanceRef = useRef<google.maps.places.Autocomplete | null>(null);
+  // Bandera para evitar bucles infinitos de eventos
+  const isHandlingPlaceSelection = useRef(false);
+  
+  // Función mejorada para cerrar el dropdown de Google Places
+  const closeGooglePlacesDropdown = () => {
+    // Si ya estamos procesando una selección, no hacer nada para evitar bucles
+    if (isHandlingPlaceSelection.current) {
+      return;
+    }
+    
+    console.log('🔒 Cerrando dropdown de Google Places');
+    
+    // Ocultar contenedores elegantemente
+    const pacContainers = document.querySelectorAll('.pac-container');
+    if (pacContainers.length === 0) return;
+    
+    pacContainers.forEach(container => {
+      const element = container as HTMLElement;
+      element.style.display = 'none';
+      element.style.visibility = 'hidden';
+      element.style.opacity = '0';
+    });
+    
+    // Un enfoque más suave sin cambios de foco agresivos
+    document.body.click();
+  };
+  // Función mejorada para manejar cuando se selecciona un lugar
+  const handlePlaceChanged = () => {
+    // Marcar que estamos procesando una selección para evitar bucles
+    isHandlingPlaceSelection.current = true;
+    
+    try {
+      if (!autocompleteInstanceRef.current) return;
+      
+      const place = autocompleteInstanceRef.current.getPlace();
+      
+      if (!place.geometry || !place.geometry.location) {
+        console.error('❌ No se pudieron obtener los detalles del lugar seleccionado');
+        return;
+      }
+      
+      // Extraer las coordenadas de forma segura
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      
+      const selectedLocation = {
+        ubicacion: place.formatted_address || place.name || '',
+        latitud: lat,
+        longitud: lng,
+        place_id: place.place_id
+      };
+      
+      console.log('✅ Lugar seleccionado:', selectedLocation);
+      
+      // Actualizar el formulario con la ubicación seleccionada
+      setFormData(prev => ({
+        ...prev,
+        ubicacion: selectedLocation.ubicacion,
+        latitud: selectedLocation.latitud,
+        longitud: selectedLocation.longitud
+      }));
+      
+      // Actualizar el valor del input directamente
+      if (autocompleteInputRef.current) {
+        autocompleteInputRef.current.value = selectedLocation.ubicacion;
+        
+        // Ya no necesitamos disparar eventos artificiales
+        console.log('🌎 Ubicación actualizada con éxito:', selectedLocation.ubicacion);
+        
+        // Cerrar el dropdown de sugerencias
+        closeGooglePlacesDropdown();
+      }
+    } finally {
+      // Importante: establecer un timeout para resetear la bandera
+      // esto permite que los eventos pendientes se procesen antes de aceptar nuevas selecciones
+      setTimeout(() => {
+        isHandlingPlaceSelection.current = false;
+      }, 300);
+    }
+  };
+  // Función mejorada y más robusta para reiniciar el autocompletado
+  const resetAutocomplete = () => {
+    // Si estamos en medio de una selección, no reiniciar
+    if (isHandlingPlaceSelection.current) return;
+    
+    console.log('🔄 Reiniciando autocompletado');
+    
+    // Solo reiniciar si tenemos referencia al input y la API está cargada
+    if (!placesApiLoaded || !autocompleteInputRef.current) {
+      console.log('⚠️ No se puede reiniciar: API no cargada o input no disponible');
+      return;
+    }
+    
+    // Limpiar instancia anterior si existe
+    if (autocompleteInstanceRef.current) {
+      try {
+        google.maps.event.clearInstanceListeners(autocompleteInstanceRef.current);
+        autocompleteInstanceRef.current = null;
+      } catch (error) {
+        console.error('Error al limpiar instancia anterior:', error);
+      }
+    }
+    
+    // Pequeño retraso para asegurar que el DOM esté listo
+    setTimeout(() => {
+      try {
+        // Configurar nuevo autocompletado con opciones óptimas
+        const options: google.maps.places.AutocompleteOptions = {
+          fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+          types: ['establishment', 'geocode'],
+        };
+        
+        // Crear nueva instancia y guardarla en la ref
+        autocompleteInstanceRef.current = new google.maps.places.Autocomplete(
+          autocompleteInputRef.current as HTMLInputElement,
+          options
+        );
+        
+        // Configurar listener para cuando se selecciona un lugar de forma segura
+        google.maps.event.addListenerOnce(
+          autocompleteInstanceRef.current,
+          'place_changed',
+          handlePlaceChanged
+        );
+        
+        // Aplicar estilos al contenedor de autocompletado
+        setTimeout(() => {
+          const pacContainers = document.querySelectorAll('.pac-container');
+          pacContainers.forEach(container => {
+            const element = container as HTMLElement;
+            element.style.zIndex = '9999';
+            element.style.borderRadius = '0.75rem';
+            element.style.marginTop = '4px';
+            element.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)';
+            element.style.border = '1px solid rgb(196, 181, 253)';
+            element.style.transition = 'opacity 0.2s ease';
+          });
+        }, 200);
+        
+        console.log('✅ Autocompletado reiniciado exitosamente');
+      } catch (error) {
+        console.error('❌ Error al reiniciar autocompletado:', error);
+      }
+    }, 50);
+  };
+  
+  // Cargar la API de Google Maps/Places
+  useEffect(() => {
+    const loadGoogleMapsApi = async () => {
+      try {
+        setPlacesLoading(true);
+        console.log('🚀 Iniciando carga de Google Places API...');
+        
+        const loader = new GoogleMapsLoader({
+          apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+          version: 'weekly',
+          libraries: ['places']
+        });
+        
+        await loader.load();
+        console.log('📦 Google Maps API cargada, importando librería Places...');
+        
+        // Importar el nuevo elemento de autocompletado
+        await google.maps.importLibrary('places');
+        console.log('✅ Places Library importada correctamente');
+        
+        setPlacesApiLoaded(true);
+        console.log('🌎 Google Places API (nueva versión) cargada correctamente');
+      } catch (error) {
+        console.error('❌ Error al cargar Google Places API:', error);
+      } finally {
+        setPlacesLoading(false);
+      }
+    };
+
+    if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+      loadGoogleMapsApi();
+    } else {
+      console.error('❌ API key de Google Maps no encontrada');
+    }  }, []); 
+    // Inicializar el autocompletado cuando la API esté cargada
+  useEffect(() => {
+    if (!placesApiLoaded || !autocompleteInputRef.current) return;
+    
+    // Inicializar el autocompletado solo una vez cuando la API esté lista
+    console.log('🔄 Inicializando autocompletado porque Places API fue cargada');
+    resetAutocomplete();
+    
+    // Limpiar listeners cuando el componente se desmonte
+    return () => {
+      try {
+        if (autocompleteInstanceRef.current) {
+          google.maps.event.clearInstanceListeners(autocompleteInstanceRef.current);
+          autocompleteInstanceRef.current = null;
+          console.log('🧹 Limpieza de instancia de autocompletado al desmontar');
+        }
+      } catch (error) {
+        console.error('Error al limpiar instancia de autocompletado:', error);
+      }
+    };
+  }, [placesApiLoaded]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -77,7 +288,6 @@ export default function NuevoLugar() {
       throw new Error('Error al subir la imagen');
     }
   };
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
@@ -89,7 +299,25 @@ export default function NuevoLugar() {
       newErrors.descripcion = "La descripción es obligatoria";
     }
     
-    if (!formData.ubicacion.trim()) {
+    // Verificar la ubicación: ahora obtenemos el valor desde el input directamente
+    // en caso de que la API de Places haya cambiado el valor pero no haya actualizado el estado
+    let ubicacionValue = formData.ubicacion;
+    
+    // Intentar obtener el valor desde el campo de entrada si existe
+    if (autocompleteInputRef.current && 'value' in autocompleteInputRef.current) {
+      const inputValue = (autocompleteInputRef.current as HTMLInputElement).value;
+      if (inputValue && inputValue.trim()) {
+        ubicacionValue = inputValue;
+        
+        // Actualizar el formData si el input tiene un valor pero el formData no
+        if (!formData.ubicacion || formData.ubicacion !== inputValue) {
+          console.log('⚠️ Actualizando ubicación desde el input:', inputValue);
+          setFormData(prev => ({ ...prev, ubicacion: inputValue }));
+        }
+      }
+    }
+    
+    if (!ubicacionValue || !ubicacionValue.trim()) {
       newErrors.ubicacion = "La ubicación es obligatoria";
     }
     
@@ -104,11 +332,21 @@ export default function NuevoLugar() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Actualizar el valor de ubicación desde el input si existe
+    if (autocompleteInputRef.current && 'value' in autocompleteInputRef.current) {
+      const inputValue = (autocompleteInputRef.current as HTMLInputElement).value;
+      if (inputValue && inputValue.trim() && inputValue !== formData.ubicacion) {
+        console.log('📍 Actualizando ubicación antes de validar:', inputValue);
+        setFormData(prev => ({...prev, ubicacion: inputValue}));
+      }
+    }
+    
     if (!validateForm()) {
+      console.log('❌ Validación fallida. Errores:', errors);
+      console.log('Estado actual del formulario:', formData);
       return;
     }
     
@@ -123,13 +361,15 @@ export default function NuevoLugar() {
         imageUrl = await uploadImageToImgBB(imageFile);
         setIsUploading(false);
       }
-      
-      // Aquí normalmente guardarías en una base de datos
+        // Aquí normalmente guardarías en una base de datos
       // Por ahora simularemos el guardado en localStorage
       const nuevoRecuerdo = {
         id: Date.now(),
         ...formData,
         imagen: imageUrl,
+        // Asegurarse de que guardamos las coordenadas si están disponibles
+        latitud: formData.latitud,
+        longitud: formData.longitud,
         fechaCreacion: new Date().toISOString()
       };
       
@@ -335,25 +575,159 @@ export default function NuevoLugar() {
                     <p className="text-red-600 text-sm font-medium">{errors.titulo}</p>
                   </div>
                 )}
-              </div>
-
-              {/* Ubicación */}
-              <div>
+              </div>              {/* Ubicación */}              <div>
                 <label htmlFor="ubicacion" className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-indigo-500" />
                   Ubicación *
+                  {placesApiLoaded ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="text-green-500 mr-1">●</span> API Lista
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      <span className="animate-pulse mr-1">○</span> Cargando API
+                    </span>
+                  )}
                 </label>
+                
                 <div className="relative">
-                  <input
-                    id="ubicacion"
-                    type="text"
-                    value={formData.ubicacion}
-                    onChange={(e) => setFormData({ ...formData, ubicacion: e.target.value })}
-                    placeholder="Ej: Santorini, Grecia"
-                    className="w-full px-4 py-4 pl-12 border-2 border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 text-gray-900 placeholder-gray-500 bg-white/80"
-                  />
-                  <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-indigo-400" />
+                  {/* Contenedor para el autocompletado */}
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-indigo-400 z-10" />                    <input
+                      ref={autocompleteInputRef}
+                      type="text"
+                      id="ubicacion"
+                      name="ubicacion"
+                      defaultValue={formData.ubicacion}
+                      onChange={(e) => {
+                        // No procesar cambios si estamos manejando una selección
+                        if (isHandlingPlaceSelection.current) return;
+                        
+                        console.log('📝 Input de ubicación actualizado:', e.target.value);
+                        
+                        // Si el campo está vacío, limpiar también la geolocalización
+                        if (e.target.value === '') {
+                          console.log('🧹 Limpiando datos de ubicación y geolocalización');
+                          setFormData(prev => ({
+                            ...prev, 
+                            ubicacion: '',
+                            latitud: undefined,
+                            longitud: undefined
+                          }));
+                        } else {
+                          // Actualización normal si no está vacío
+                          setFormData(prevData => ({ 
+                            ...prevData, 
+                            ubicacion: e.target.value 
+                          }));
+                        }
+                      }}
+                      onFocus={() => {
+                        // No procesar focus si estamos manejando una selección
+                        if (isHandlingPlaceSelection.current) return;
+                        
+                        console.log('👁️ Campo de ubicación enfocado');
+                        
+                        // Solo reiniciar si no hay instancia de autocompletado
+                        if (!autocompleteInstanceRef.current) {
+                          console.log('🔄 Reiniciando autocompletado (sin instancia)');
+                          resetAutocomplete();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // No procesar teclas si estamos manejando una selección
+                        if (isHandlingPlaceSelection.current) return;
+                        
+                        // Cerrar dropdown al presionar Enter o Tab
+                        if (e.key === 'Enter' || e.key === 'Tab') {
+                          closeGooglePlacesDropdown();
+                          console.log('🔒 Dropdown cerrado por tecla:', e.key);
+                        }
+                        
+                        // Si presionamos Backspace y estamos borrando todo el contenido
+                        if (e.key === 'Backspace' && 
+                            autocompleteInputRef.current?.value.length === 1) {
+                          // Limpiar completamente los datos de ubicación
+                          console.log('🧹 Borrando toda la ubicación (Backspace)');
+                          setFormData(prev => ({
+                            ...prev, 
+                            ubicacion: '',
+                            latitud: undefined,
+                            longitud: undefined
+                          }));
+                          
+                          // Solo resetear el autocompletado, sin forzar focus
+                          setTimeout(() => resetAutocomplete(), 100);
+                        }
+                      }}
+                      onBlur={() => {
+                        // No procesar blur si estamos manejando una selección
+                        if (isHandlingPlaceSelection.current) return;
+                        
+                        console.log('👁️‍🗨️ Campo de ubicación perdió el foco');
+                        
+                        // Cerrar dropdown suavemente
+                        closeGooglePlacesDropdown();
+                        
+                        // Sincronizar el estado con el valor del input solo si es diferente
+                        if (autocompleteInputRef.current) {
+                          const currentValue = autocompleteInputRef.current.value;
+                          if (currentValue !== formData.ubicacion) {
+                            console.log('📌 Sincronizando estado con valor del input:', currentValue);
+                            setFormData(prev => ({
+                              ...prev,
+                              ubicacion: currentValue,
+                              // Solo mantener coordenadas si hay una ubicación
+                              latitud: currentValue ? prev.latitud : undefined,
+                              longitud: currentValue ? prev.longitud : undefined
+                            }));
+                          }
+                        }
+                      }}
+                      placeholder={placesApiLoaded ? "Ej: Torre Eiffel, París, Francia" : "Cargando autocompletado..."}
+                      className={`w-full px-4 py-4 pl-12 border-2 ${formData.ubicacion ? 'border-indigo-400 bg-indigo-50/30' : 'border-indigo-200'} rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 text-gray-900 placeholder-gray-500 bg-white/80`}
+                    />
+                    {placesLoading && (
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10">
+                        <div className="animate-spin h-4 w-4 border-b-2 rounded-full border-indigo-500"></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="flex-shrink-0 mt-0.5">
+                    {formData.ubicacion ? (
+                      <div className="text-green-500 text-sm">✓</div>
+                    ) : placesApiLoaded ? (
+                      <div className="text-blue-500 text-sm">ℹ</div>
+                    ) : (
+                      <div className="text-amber-500 text-sm">⚠</div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 ml-0.5">
+                    {formData.ubicacion 
+                      ? "Ubicación seleccionada. Puedes continuar o seleccionar otra ubicación."
+                      : placesApiLoaded 
+                        ? "Comienza a escribir para ver sugerencias de ubicaciones precisas." 
+                        : "Cargando servicio de ubicaciones..."}
+                  </p>
+                </div>
+                
+                {/* Coordenadas (opcional) */}
+                {formData.latitud && formData.longitud && (
+                  <div className="mt-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-200">
+                    <div className="flex items-center gap-2 text-xs text-indigo-700">
+                      <MapPin className="h-3 w-3" />
+                      <span className="font-semibold">Coordenadas:</span>
+                      <span className="font-mono bg-white px-2 py-1 rounded">
+                        {formData.latitud.toFixed(6)}, {formData.longitud.toFixed(6)}
+                      </span>
+                      <Sparkles className="h-3 w-3 text-purple-500" />
+                    </div>
+                  </div>
+                )}
+                
                 {errors.ubicacion && (
                   <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-2">
                     <p className="text-red-600 text-sm font-medium">{errors.ubicacion}</p>
@@ -458,11 +832,10 @@ export default function NuevoLugar() {
                 </>
               )}
             </button>
-          </div>
-
-          {/* Mensaje inspiracional */}
+          </div>          {/* Mensaje inspiracional */}
           <div className="text-center pt-6">
-            <div className="bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 rounded-2xl p-6 shadow-lg">              <p className="text-gray-700 italic leading-relaxed">
+            <div className="bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 rounded-2xl p-6 shadow-lg">
+              <p className="text-gray-700 italic leading-relaxed">
                 &ldquo;Los recuerdos son los tesoros más preciados que podemos guardar. 
                 Cada momento compartido se convierte en una historia que atesoraremos para siempre&rdquo;
                 <span className="text-pink-500">💕</span>
