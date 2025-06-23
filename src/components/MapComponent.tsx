@@ -3,20 +3,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { MapPin, Heart } from 'lucide-react';
+import type { Recuerdo } from '@/lib/fileStorage';
 
-interface Recuerdo {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  imagen: string;
-  fecha: string;
-  ubicacion: string;
-}
-
-interface MapLocation {
+export interface MapLocation {
   id: number;
   ubicacion: string;
-  recuerdos: Recuerdo[];
+  recuerdos: Recuerdo[]; // ahora usa el tipo importado
   lat?: number;
   lng?: number;
 }

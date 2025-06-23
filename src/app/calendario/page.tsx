@@ -21,15 +21,8 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { parseLocalDate} from "@/utils/dateUtils";
-
-interface Recuerdo {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  imagen: string;
-  fecha: string;
-  ubicacion: string;
-}
+import { recuerdosApi } from "@/lib/recuerdosApi";
+import type { Recuerdo } from "@/lib/fileStorage";
 
 interface CalendarDay {
   date: Date;
@@ -39,9 +32,9 @@ interface CalendarDay {
 
 export default function CalendarioPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
-  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date());  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(new Date());const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
   const [showMobileModal, setShowMobileModal] = useState(false);
@@ -53,16 +46,28 @@ export default function CalendarioPage() {
   ];
 
   const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
   useEffect(() => {
     if (status === "loading") return;
     
     if (!session) {
       router.push("/login");
       return;
-    }    // Cargar recuerdos del localStorage
-    const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-    setRecuerdos(recuerdosGuardados);
+    }
+
+    // Cargar recuerdos desde la API
+    const cargarRecuerdos = async () => {
+      try {
+        setLoading(true);
+        const recuerdosData = await recuerdosApi.getAll();
+        setRecuerdos(recuerdosData);
+      } catch (error) {
+        console.error('Error al cargar recuerdos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarRecuerdos();
   }, [session, status, router]);
 
   const generateCalendarDays = useCallback(() => {
@@ -141,17 +146,21 @@ export default function CalendarioPage() {
 
   const handleEditRecuerdo = (id: number) => {
     router.push(`/editar-recuerdo/${id}`);
-  };
-  const handleDeleteRecuerdo = (id: number) => {
-    const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
-    setRecuerdos(nuevosRecuerdos);
-    localStorage.setItem('sebyhun-recuerdos', JSON.stringify(nuevosRecuerdos));
-    setShowDeleteModal(null);
-    
-    // Si no quedan más recuerdos en la fecha seleccionada, limpiar la selección
-    const selectedDay = calendarDays.find(day => selectedDate && isSelected(day.date));
-    if (selectedDay && selectedDay.recuerdos.length <= 1) {
-      setSelectedDate(null);
+  };  const handleDeleteRecuerdo = async (id: number) => {
+    try {
+      await recuerdosApi.delete(id);
+      const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
+      setRecuerdos(nuevosRecuerdos);
+      setShowDeleteModal(null);
+      
+      // Si no quedan más recuerdos en la fecha seleccionada, limpiar la selección
+      const selectedDay = calendarDays.find(day => selectedDate && isSelected(day.date));
+      if (selectedDay && selectedDay.recuerdos.length <= 1) {
+        setSelectedDate(null);
+      }
+    } catch (error) {
+      console.error('Error al eliminar recuerdo:', error);
+      alert('Error al eliminar el recuerdo. Inténtalo de nuevo.');
     }
   };
 
@@ -173,7 +182,7 @@ export default function CalendarioPage() {
     );
   };
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center px-4">
         <div className="flex flex-col items-center gap-4">

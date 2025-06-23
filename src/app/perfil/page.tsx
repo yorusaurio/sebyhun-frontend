@@ -30,6 +30,8 @@ import {
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { recuerdosApi } from "@/lib/recuerdosApi";
+import type { Recuerdo } from "@/lib/fileStorage";
 
 interface UserProfile {
   nombre: string;
@@ -42,18 +44,8 @@ interface UserProfile {
   lugarFavorito: string;
   cancionFavorita: string;
   comidaFavorita: string;
-  colorFavorito: string;
-  fraseFavorita: string;
+  colorFavorito: string;  fraseFavorita: string;
   suenoCompartido: string;
-}
-
-interface Recuerdo {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  imagen: string;
-  fecha: string;
-  ubicacion: string;
 }
 
 interface Estadisticas {
@@ -189,11 +181,20 @@ export default function PerfilPage() {
         suenoCompartido: ""
       };
       setProfile(initialProfile);
-      setTempProfile(initialProfile);
-    }    // Cargar recuerdos para estadísticas
-    const savedRecuerdos = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');    
-    // Calcular estadísticas
-    calcularEstadisticas(savedRecuerdos);  }, [session, status, router, calcularEstadisticas]);
+      setTempProfile(initialProfile);    }
+
+    // Cargar recuerdos desde la API para estadísticas
+    const cargarRecuerdos = async () => {
+      try {
+        const recuerdosData = await recuerdosApi.getAll();
+        // Calcular estadísticas
+        calcularEstadisticas(recuerdosData);
+      } catch (error) {
+        console.error('Error al cargar recuerdos:', error);
+      }
+    };
+
+    cargarRecuerdos();}, [session, status, router, calcularEstadisticas]);
 
   const handleSaveProfile = () => {
     localStorage.setItem('sebyhun-profile', JSON.stringify(tempProfile));

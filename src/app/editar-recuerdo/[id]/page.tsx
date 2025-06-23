@@ -7,6 +7,8 @@ import { Heart, MapPin, Upload, ArrowLeft, Save, X, Sparkles } from "lucide-reac
 import Image from "next/image";
 import axios from "axios";
 import { Loader as GoogleMapsLoader } from "@googlemaps/js-api-loader";
+import { recuerdosApi } from "@/lib/recuerdosApi";
+import type { Recuerdo } from "@/lib/fileStorage";
 
 interface FormData {
   titulo: string;
@@ -24,14 +26,14 @@ export default function EditarRecuerdo() {
   const router = useRouter();
   const params = useParams();
   const recuerdoId = params.id as string;
-  
-  const [formData, setFormData] = useState<FormData>({
+    const [formData, setFormData] = useState<FormData>({
     titulo: "",
     descripcion: "",
     ubicacion: "",
     fecha: "",
     imagen: ""
   });
+  const [recuerdo, setRecuerdo] = useState<Recuerdo | null>(null);
     const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
@@ -45,8 +47,7 @@ export default function EditarRecuerdo() {
   // Referencia para la instancia de autocompletado
   const autocompleteInstanceRef = useRef<google.maps.places.Autocomplete | null>(null);
   // Bandera para evitar bucles infinitos de eventos
-  const isHandlingPlaceSelection = useRef(false);
-  useEffect(() => {
+  const isHandlingPlaceSelection = useRef(false);  useEffect(() => {
     if (status === "loading") return;
     
     if (!session) {
@@ -54,42 +55,48 @@ export default function EditarRecuerdo() {
       return;
     }
 
-    // LOG: Iniciando carga del recuerdo
-    console.log('📋 Cargando recuerdo para editar - ID:', recuerdoId);
-    
-    // Cargar el recuerdo a editar
-    const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-    console.log('💾 Recuerdos en localStorage:', recuerdosGuardados);
-    
-    const recuerdo = recuerdosGuardados.find((r: { id: number }) => r.id === parseInt(recuerdoId));
-    
-    if (!recuerdo) {
-      console.error('❌ No se encontró el recuerdo con ID:', recuerdoId);
-      router.push("/home");
-      return;
-    }
+    // Cargar el recuerdo a editar desde la API
+    const cargarRecuerdo = async () => {
+      try {
+        console.log('📋 Cargando recuerdo para editar - ID:', recuerdoId);
+        
+        const recuerdos = await recuerdosApi.getAll();
+        const recuerdoEncontrado = recuerdos.find(r => r.id === parseInt(recuerdoId));
+        
+        if (!recuerdoEncontrado) {
+          console.error('❌ No se encontró el recuerdo con ID:', recuerdoId);
+          router.push("/home");
+          return;
+        }
 
-    // LOG: Datos del recuerdo encontrado
-    console.log('✅ Recuerdo encontrado:', recuerdo);
-    console.log('📅 Fecha del recuerdo:', recuerdo.fecha);
-    console.log('📅 Tipo de fecha:', typeof recuerdo.fecha);
-    console.log('📅 Fecha como Date object:', new Date(recuerdo.fecha));
+        // LOG: Datos del recuerdo encontrado
+        console.log('✅ Recuerdo encontrado:', recuerdoEncontrado);
+        console.log('📅 Fecha del recuerdo:', recuerdoEncontrado.fecha);
+        console.log('📅 Tipo de fecha:', typeof recuerdoEncontrado.fecha);
+        console.log('📅 Fecha como Date object:', new Date(recuerdoEncontrado.fecha));
 
-    setFormData({
-      titulo: recuerdo.titulo,
-      descripcion: recuerdo.descripcion,
-      ubicacion: recuerdo.ubicacion,
-      fecha: recuerdo.fecha,
-      imagen: recuerdo.imagen,
-      // Incluir coordenadas si existen
-      latitud: recuerdo.latitud,
-      longitud: recuerdo.longitud
-    });
-    
-    console.log('📝 FormData configurado con fecha:', recuerdo.fecha);
-    
-    setImagePreview(recuerdo.imagen);
-    setIsLoading(false);
+        setRecuerdo(recuerdoEncontrado);
+        setFormData({
+          titulo: recuerdoEncontrado.titulo,
+          descripcion: recuerdoEncontrado.descripcion,
+          ubicacion: recuerdoEncontrado.ubicacion,
+          fecha: recuerdoEncontrado.fecha,
+          imagen: recuerdoEncontrado.imagen || "",
+          latitud: recuerdoEncontrado.latitud,
+          longitud: recuerdoEncontrado.longitud
+        });
+        
+        console.log('📝 FormData configurado con fecha:', recuerdoEncontrado.fecha);
+        
+        setImagePreview(recuerdoEncontrado.imagen || "");
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error al cargar recuerdo:', error);
+        router.push("/home");
+      }
+    };
+
+    cargarRecuerdo();
   }, [session, status, router, recuerdoId]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,42 +214,18 @@ export default function EditarRecuerdo() {
         imageUrl = await uploadImageToImgBB(imageFile);
         setIsUploading(false);
         console.log('✅ Nueva imagen subida:', imageUrl);
-      }
-        // Actualizar el recuerdo
-      const recuerdosExistentes = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-      console.log('📦 Recuerdos existentes antes de actualizar:', recuerdosExistentes);
-      
-      const updatedRecuerdos = recuerdosExistentes.map((r: { id: number; [key: string]: unknown }) => {
-        if (r.id === parseInt(recuerdoId)) {
-          console.log('🔄 Actualizando recuerdo ID:', r.id);
-          console.log('  • Fecha anterior:', r.fecha);
-          console.log('  • Fecha nueva:', formData.fecha);
-          
-          // Guardar las coordenadas para una mejor integración con el mapa
-          const recuerdoActualizado = {
-            ...r,
-            ...formData,
-            imagen: imageUrl,
-            // Guardamos coordenadas de geolocalización si existen
-            latitud: formData.latitud,
-            longitud: formData.longitud,
-            fechaActualizacion: new Date().toISOString()
-          };
-          
-          console.log('✅ Recuerdo actualizado:', recuerdoActualizado);
-          return recuerdoActualizado;
-        }
-        return r;
+      }      // Actualizar el recuerdo usando la API
+      const recuerdoActualizado = await recuerdosApi.update(parseInt(recuerdoId), {
+        titulo: formData.titulo,
+        descripcion: formData.descripcion,
+        ubicacion: formData.ubicacion,
+        fecha: formData.fecha,
+        imagen: imageUrl,
+        latitud: formData.latitud,
+        longitud: formData.longitud
       });
       
-      console.log('💾 Guardando recuerdos actualizados en localStorage...');
-      localStorage.setItem('sebyhun-recuerdos', JSON.stringify(updatedRecuerdos));
-        // LOG: Verificar lo que se guardó
-      const recuerdoGuardado = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-      const recuerdoActualizado = recuerdoGuardado.find((r: { id: number }) => r.id === parseInt(recuerdoId));
-      console.log('📋 Recuerdo actualizado guardado:');
-      console.log('  • Fecha guardada:', recuerdoActualizado?.fecha);
-      console.log('  • Objeto completo:', recuerdoActualizado);
+      console.log('✅ Recuerdo actualizado mediante API:', recuerdoActualizado);
       
       // Simular delay de guardado
       await new Promise(resolve => setTimeout(resolve, 1000));

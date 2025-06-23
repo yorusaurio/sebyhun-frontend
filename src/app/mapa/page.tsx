@@ -26,6 +26,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import dynamic from 'next/dynamic';
 import { formatDateSafe, parseLocalDate, compareDates } from "@/utils/dateUtils";
+import { recuerdosApi } from "@/lib/recuerdosApi";
+import type { Recuerdo } from "@/lib/fileStorage";
+import type { MapLocation } from "@/components/MapComponent";
 
 const GoogleMapComponent = dynamic(() => import("@/components/MapComponent"), {
   ssr: false,
@@ -34,34 +37,16 @@ const GoogleMapComponent = dynamic(() => import("@/components/MapComponent"), {
   </div>
 });
 
-interface Recuerdo {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  imagen: string;
-  fecha: string;
-  ubicacion: string;
-}
-
-interface MapLocation {
-  id: number;
-  ubicacion: string;
-  recuerdos: Recuerdo[];
-  lat?: number;
-  lng?: number;
-}
-
 export default function MapaPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
-  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
   const [locations, setLocations] = useState<MapLocation[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
   const [selectedRecuerdo, setSelectedRecuerdo] = useState<Recuerdo | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);  const [searchTerm, setSearchTerm] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<'map' | 'grid' | 'list'>('map');
   const [filterByYear, setFilterByYear] = useState<string>('all');
-
   useEffect(() => {
     if (status === "loading") return;
     
@@ -70,37 +55,66 @@ export default function MapaPage() {
       return;
     }
 
-    // Cargar recuerdos del localStorage
-    const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-    setRecuerdos(recuerdosGuardados);
-    
-    // Agrupar recuerdos por ubicación
-    const locationMap = new Map<string, MapLocation>();
-      recuerdosGuardados.forEach((recuerdo: Recuerdo) => {
-      const ubicacion = recuerdo.ubicacion;
-      if (locationMap.has(ubicacion)) {
-        locationMap.get(ubicacion)!.recuerdos.push(recuerdo);
-      } else {
-        locationMap.set(ubicacion, {
-          id: Date.now() + Math.random(),
-          ubicacion,
-          recuerdos: [recuerdo]
-          // Las coordenadas se obtienen automáticamente mediante geocoding en GoogleMapComponent
+    // Cargar recuerdos desde la API
+    const cargarRecuerdos = async () => {
+      try {
+        setLoading(true);
+        const recuerdosData = await recuerdosApi.getAll();
+        setRecuerdos(recuerdosData);
+        
+        // Agrupar recuerdos por ubicación
+        const locationMap = new Map<string, MapLocation>();
+        recuerdosData.forEach((recuerdo: Recuerdo) => {
+          const ubicacion = recuerdo.ubicacion;
+          if (locationMap.has(ubicacion)) {
+            locationMap.get(ubicacion)!.recuerdos.push(recuerdo);
+          } else {
+            locationMap.set(ubicacion, {
+              id: Date.now() + Math.random(),
+              ubicacion,
+              recuerdos: [recuerdo]
+              // Las coordenadas se obtienen automáticamente mediante geocoding en GoogleMapComponent
+            });
+          }
         });
+        
+        setLocations(Array.from(locationMap.values()));
+      } catch (error) {
+        console.error('Error al cargar recuerdos:', error);
+      } finally {
+        setLoading(false);
       }
-    });
-    
-    setLocations(Array.from(locationMap.values()));
-  }, [session, status, router]);
+    };
 
-  const handleDeleteRecuerdo = (id: number) => {
-    const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
-    setRecuerdos(nuevosRecuerdos);
-    localStorage.setItem('sebyhun-recuerdos', JSON.stringify(nuevosRecuerdos));
-    setShowDeleteModal(null);
-    setSelectedRecuerdo(null);
-    setSelectedLocation(null);
-  };
+    cargarRecuerdos();
+  }, [session, status, router]);
+  const handleDeleteRecuerdo = async (id: number) => {
+    try {
+      await recuerdosApi.delete(id);
+      const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
+      setRecuerdos(nuevosRecuerdos);
+      setShowDeleteModal(null);
+      
+      // Reagrupar ubicaciones
+      const locationMap = new Map<string, MapLocation>();
+      nuevosRecuerdos.forEach((recuerdo: Recuerdo) => {
+        const ubicacion = recuerdo.ubicacion;
+        if (locationMap.has(ubicacion)) {
+          locationMap.get(ubicacion)!.recuerdos.push(recuerdo);
+        } else {
+          locationMap.set(ubicacion, {
+            id: Date.now() + Math.random(),
+            ubicacion,
+            recuerdos: [recuerdo]
+          });
+        }
+      });
+      
+      setLocations(Array.from(locationMap.values()));
+    } catch (error) {
+      console.error('Error al eliminar recuerdo:', error);
+      alert('Error al eliminar el recuerdo. Inténtalo de nuevo.');
+    }  };
 
   const handleEditRecuerdo = (id: number) => {
     router.push(`/editar-recuerdo/${id}`);
@@ -133,8 +147,7 @@ export default function MapaPage() {
     });
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   };
-
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center px-4">
         <div className="flex flex-col items-center gap-4">
@@ -328,9 +341,8 @@ export default function MapaPage() {
             </div>
           </div>        ) : viewMode === 'map' ? (
           /* Vista del mapa interactivo */
-          <div className="space-y-6">
-            {/* Mensaje informativo para Google Maps */}
-            {(!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY === 'tu_google_maps_api_key_aqui') && (
+          <div className="space-y-6">            {/* Mensaje informativo para Google Maps - solo si no está configurada */}
+            {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-6 shadow-lg">
                 <div className="flex items-start gap-4">
                   <div className="bg-blue-100 p-3 rounded-full flex-shrink-0">
@@ -356,8 +368,7 @@ export default function MapaPage() {
                   </div>
                 </div>
               </div>
-            )}
-            
+            )}            {/* Mapa interactivo de Google Maps */}
             <GoogleMapComponent 
               locations={filteredLocations}
               onLocationClick={handleLocationClick}

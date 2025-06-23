@@ -1,0 +1,16 @@
+{
+  "recuerdos": [
+    {
+      "id": 1,
+      "titulo": "Test",
+      "descripcion": "Test",
+      "ubicacion": "Hola catalina, Mariano Pacheco, Lima, Perú",
+      "fecha": "2025-06-10",
+      "imagen": "https://i.ibb.co/G31S66XK/cuarto.jpg",
+      "userId": "anonymous",
+      "fechaCreacion": "2025-06-23T16:25:21.514Z",
+      "fechaActualizacion": "2025-06-23T16:25:21.514Z"
+    }
+  ],
+  "lastUpdated": "2025-06-23T16:25:21.514Z"
+}

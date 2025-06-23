@@ -8,56 +8,67 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { formatDateSafe, compareDates } from "@/utils/dateUtils";
-
-interface Recuerdo {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  imagen: string;
-  fecha: string;
-  ubicacion: string;
-}
+import { recuerdosApi } from "@/lib/recuerdosApi";
+import type { Recuerdo } from "@/lib/fileStorage";
 
 export default function HomeRecuerdos() {
   const { data: session, status } = useSession();
-  const router = useRouter();
-  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
   const [selectedRecuerdo, setSelectedRecuerdo] = useState<Recuerdo | null>(null);
-
   useEffect(() => {
     if (status === "loading") return;
     
     if (!session) {
       router.push("/login");
       return;
-    }    // Cargar recuerdos del localStorage
-    const recuerdosGuardados = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-      // LOG: Verificar fechas al cargar en HOME
-    console.log('🏠 Cargando recuerdos en HOME - Total:', recuerdosGuardados.length);
-    recuerdosGuardados.forEach((recuerdo: Recuerdo, index: number) => {
-      console.log(`📅 Recuerdo ${index + 1}:`, {
-        id: recuerdo.id,
-        titulo: recuerdo.titulo,
-        fecha: recuerdo.fecha,
-        fechaTipo: typeof recuerdo.fecha,
-        fechaComoDate: new Date(recuerdo.fecha),
-        fechaFormateada: new Date(recuerdo.fecha).toLocaleDateString('es-ES')
-      });
-    });
-      // Ordenar por fecha descendente usando la función utilitaria segura
-    recuerdosGuardados.sort((a: Recuerdo, b: Recuerdo) => 
-      compareDates(b.fecha, a.fecha)
-    );
-    
-    setRecuerdos(recuerdosGuardados);
-  }, [session, status, router]);
+    }
 
-  const handleDeleteRecuerdo = (id: number) => {
-    const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
-    setRecuerdos(nuevosRecuerdos);
-    localStorage.setItem('sebyhun-recuerdos', JSON.stringify(nuevosRecuerdos));
-    setShowDeleteModal(null);
+    // Cargar recuerdos desde la API
+    const cargarRecuerdos = async () => {
+      try {
+        setLoading(true);
+        const recuerdosData = await recuerdosApi.getAll();
+        
+        // LOG: Verificar fechas al cargar en HOME
+        console.log('🏠 Cargando recuerdos en HOME desde API - Total:', recuerdosData.length);
+        recuerdosData.forEach((recuerdo: Recuerdo, index: number) => {
+          console.log(`📅 Recuerdo ${index + 1}:`, {
+            id: recuerdo.id,
+            titulo: recuerdo.titulo,
+            fecha: recuerdo.fecha,
+            fechaTipo: typeof recuerdo.fecha,
+            fechaComoDate: new Date(recuerdo.fecha),
+            fechaFormateada: new Date(recuerdo.fecha).toLocaleDateString('es-ES')
+          });
+        });
+
+        // Ordenar por fecha descendente usando la función utilitaria segura
+        recuerdosData.sort((a: Recuerdo, b: Recuerdo) => 
+          compareDates(b.fecha, a.fecha)
+        );
+        
+        setRecuerdos(recuerdosData);
+      } catch (error) {
+        console.error('Error al cargar recuerdos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarRecuerdos();
+  }, [session, status, router]);
+  const handleDeleteRecuerdo = async (id: number) => {
+    try {
+      await recuerdosApi.delete(id);
+      const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
+      setRecuerdos(nuevosRecuerdos);
+      setShowDeleteModal(null);
+    } catch (error) {
+      console.error('Error al eliminar recuerdo:', error);
+      alert('Error al eliminar el recuerdo. Inténtalo de nuevo.');
+    }
   };
 
   const handleEditRecuerdo = (id: number) => {
@@ -75,7 +86,7 @@ export default function HomeRecuerdos() {
     return formatDateSafe(dateString);
   };
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center px-4">
         <div className="flex flex-col items-center gap-4">

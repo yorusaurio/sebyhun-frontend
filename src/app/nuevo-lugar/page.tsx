@@ -8,6 +8,7 @@ import Image from "next/image";
 import axios from "axios";
 import { Loader as GoogleMapsLoader } from "@googlemaps/js-api-loader";
 import { getCurrentLocalDateString } from "@/utils/dateUtils";
+import { recuerdosApi } from "@/lib/recuerdosApi";
 
 interface FormData {
   titulo: string;
@@ -371,37 +372,24 @@ export default function NuevoLugar() {
         imageUrl = await uploadImageToImgBB(imageFile);
         setIsUploading(false);
         console.log('✅ Imagen subida:', imageUrl);
-      }
-        // Aquí normalmente guardarías en una base de datos
-      // Por ahora simularemos el guardado en localStorage
-      const nuevoRecuerdo = {
-        id: Date.now(),
-        ...formData,
+      }      // Crear el recuerdo usando la API  
+      const nuevoRecuerdo = await recuerdosApi.create({
+        titulo: formData.titulo,
+        descripcion: formData.descripcion,
+        ubicacion: formData.ubicacion,
+        fecha: formData.fecha,
         imagen: imageUrl,
-        // Asegurarse de que guardamos las coordenadas si están disponibles
         latitud: formData.latitud,
         longitud: formData.longitud,
-        fechaCreacion: new Date().toISOString()
-      };
+        userId: session?.user?.email || 'anonymous'
+      });
       
-      // LOG: Información del objeto que se guardará
-      console.log('📦 Objeto recuerdo creado:');
+      // LOG: Información del objeto que se guardó
+      console.log('📦 Recuerdo creado mediante API:');
       console.log('  • ID:', nuevoRecuerdo.id);
       console.log('  • Fecha del recuerdo:', nuevoRecuerdo.fecha);
       console.log('  • Fecha de creación:', nuevoRecuerdo.fechaCreacion);
       console.log('  • Objeto completo:', nuevoRecuerdo);
-      
-      // Obtener recuerdos existentes del localStorage
-      const recuerdosExistentes = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-      recuerdosExistentes.push(nuevoRecuerdo);
-      localStorage.setItem('sebyhun-recuerdos', JSON.stringify(recuerdosExistentes));
-      
-      // LOG: Verificar lo que se guardó
-      const recuerdoGuardado = JSON.parse(localStorage.getItem('sebyhun-recuerdos') || '[]');
-      const ultimoRecuerdo = recuerdoGuardado[recuerdoGuardado.length - 1];
-      console.log('💾 Recuerdo guardado en localStorage:');
-      console.log('  • Fecha guardada:', ultimoRecuerdo?.fecha);
-      console.log('  • Objeto guardado completo:', ultimoRecuerdo);
       
       // Simular delay de guardado
       await new Promise(resolve => setTimeout(resolve, 1000));
