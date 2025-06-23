@@ -20,7 +20,7 @@ import {
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { parseLocalDate, formatDateSafe, compareDates } from "@/utils/dateUtils";
+import { parseLocalDate} from "@/utils/dateUtils";
 
 interface Recuerdo {
   id: number;
