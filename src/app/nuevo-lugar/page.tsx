@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Heart, MapPin, Upload, ArrowLeft, Save, X, Sparkles, Camera, Calendar } from "lucide-react";
 import Image from "next/image";
 import axios from "axios";
@@ -69,7 +69,7 @@ export default function NuevoLugar() {
     document.body.click();
   };
   // Función mejorada para manejar cuando se selecciona un lugar
-  const handlePlaceChanged = () => {
+  const handlePlaceChanged = useCallback(() => {
     // Marcar que estamos procesando una selección para evitar bucles
     isHandlingPlaceSelection.current = true;
     
@@ -104,26 +104,23 @@ export default function NuevoLugar() {
         longitud: selectedLocation.longitud
       }));
       
-      // Actualizar el valor del input directamente
+      // Para asegurarse de que el valor se actualice visualmente y se sincronice correctamente
       if (autocompleteInputRef.current) {
         autocompleteInputRef.current.value = selectedLocation.ubicacion;
-        
-        // Ya no necesitamos disparar eventos artificiales
-        console.log('🌎 Ubicación actualizada con éxito:', selectedLocation.ubicacion);
         
         // Cerrar el dropdown de sugerencias
         closeGooglePlacesDropdown();
       }
     } finally {
-      // Importante: establecer un timeout para resetear la bandera
-      // esto permite que los eventos pendientes se procesen antes de aceptar nuevas selecciones
+      // Establecer un timeout para resetear la bandera
       setTimeout(() => {
         isHandlingPlaceSelection.current = false;
       }, 300);
     }
-  };
+  }, [setFormData, closeGooglePlacesDropdown]);
+
   // Función mejorada y más robusta para reiniciar el autocompletado
-  const resetAutocomplete = () => {
+  const resetAutocomplete = useCallback(() => {
     // Si estamos en medio de una selección, no reiniciar
     if (isHandlingPlaceSelection.current) return;
     
@@ -179,14 +176,14 @@ export default function NuevoLugar() {
             element.style.border = '1px solid rgb(196, 181, 253)';
             element.style.transition = 'opacity 0.2s ease';
           });
-        }, 200);
+        }, 300);
         
         console.log('✅ Autocompletado reiniciado exitosamente');
       } catch (error) {
         console.error('❌ Error al reiniciar autocompletado:', error);
       }
     }, 50);
-  };
+  }, [placesApiLoaded, handlePlaceChanged, isHandlingPlaceSelection]);
   
   // Cargar la API de Google Maps/Places
   useEffect(() => {
@@ -221,8 +218,7 @@ export default function NuevoLugar() {
       loadGoogleMapsApi();
     } else {
       console.error('❌ API key de Google Maps no encontrada');
-    }  }, []); 
-    // Inicializar el autocompletado cuando la API esté cargada
+    }  }, []);    // Inicializar el autocompletado cuando la API esté cargada
   useEffect(() => {
     if (!placesApiLoaded || !autocompleteInputRef.current) return;
     
@@ -242,7 +238,7 @@ export default function NuevoLugar() {
         console.error('Error al limpiar instancia de autocompletado:', error);
       }
     };
-  }, [placesApiLoaded]);
+  }, [placesApiLoaded, resetAutocomplete]);
 
   useEffect(() => {
     if (status === "loading") return;

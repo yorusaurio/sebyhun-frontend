@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Heart, MapPin, Upload, ArrowLeft, Save, X, Sparkles } from "lucide-react";
 import Image from "next/image";
 import axios from "axios";
@@ -221,9 +221,8 @@ export default function EditarRecuerdo() {
     setImagePreview("");
     setFormData({ ...formData, imagen: "" });
   };
-
-  // Función mejorada para cerrar el dropdown de Google Places
-  const closeGooglePlacesDropdown = () => {
+  // Función mejorada para cerrar el dropdown de Google Places, memorizada para mayor estabilidad
+  const closeGooglePlacesDropdown = useCallback(() => {
     // Si ya estamos procesando una selección, no hacer nada para evitar bucles
     if (isHandlingPlaceSelection.current) {
       return;
@@ -244,10 +243,9 @@ export default function EditarRecuerdo() {
     
     // Un enfoque más suave sin cambios de foco agresivos
     document.body.click();
-  };
-
-  // Función mejorada para manejar cuando se selecciona un lugar
-  const handlePlaceChanged = () => {
+  }, [isHandlingPlaceSelection]);
+  // Función mejorada para manejar cuando se selecciona un lugar, memorizada para mayor estabilidad
+  const handlePlaceChanged = useCallback(() => {
     // Marcar que estamos procesando una selección para evitar bucles
     isHandlingPlaceSelection.current = true;
     
@@ -299,10 +297,9 @@ export default function EditarRecuerdo() {
         isHandlingPlaceSelection.current = false;
       }, 300);
     }
-  };
-
-  // Función mejorada y más robusta para reiniciar el autocompletado
-  const resetAutocomplete = () => {
+  }, [setFormData, closeGooglePlacesDropdown]);
+  // Función mejorada y más robusta para reiniciar el autocompletado, memorizada para evitar recreaciones
+  const resetAutocomplete = useCallback(() => {
     // Si estamos en medio de una selección, no reiniciar
     if (isHandlingPlaceSelection.current) return;
     
@@ -365,7 +362,7 @@ export default function EditarRecuerdo() {
         console.error('❌ Error al reiniciar autocompletado:', error);
       }
     }, 50);
-  };
+  }, [placesApiLoaded, handlePlaceChanged]);
 
   // Cargar la API de Google Maps/Places
   useEffect(() => {
@@ -402,8 +399,7 @@ export default function EditarRecuerdo() {
       console.error('❌ API key de Google Maps no encontrada');
     }
   }, []);
-  
-  // Inicializar el autocompletado cuando la API esté cargada
+    // Inicializar el autocompletado cuando la API esté cargada
   useEffect(() => {
     if (!placesApiLoaded || !autocompleteInputRef.current) return;
     
@@ -423,9 +419,8 @@ export default function EditarRecuerdo() {
         console.error('Error al limpiar instancia de autocompletado:', error);
       }
     };
-  }, [placesApiLoaded]);
-  
-  // Efecto para controlar el reinicio de autocompletado cuando el campo se borra completamente
+  }, [placesApiLoaded, resetAutocomplete]);
+    // Efecto para controlar el reinicio de autocompletado cuando el campo se borra completamente
   useEffect(() => {
     if (placesApiLoaded && autocompleteInputRef.current) {
       if (formData.ubicacion === '' && !isHandlingPlaceSelection.current) {
@@ -434,7 +429,7 @@ export default function EditarRecuerdo() {
         setTimeout(() => resetAutocomplete(), 50);
       }
     }
-  }, [formData.ubicacion, placesApiLoaded]);
+  }, [formData.ubicacion, placesApiLoaded, resetAutocomplete]);
 
   if (status === "loading" || isLoading) {
     return (

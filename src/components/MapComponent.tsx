@@ -54,11 +54,10 @@ const GoogleMapComponent = ({
 
   // Función para obtener la ubicación del usuario
   const getCurrentLocation = useCallback((): Promise<{ lat: number; lng: number }> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       if (!navigator.geolocation) {
         console.log('🌍 Geolocalización no disponible en este navegador');
         setLocationStatus('unavailable');
-        // Fallback a Lima, Perú
         resolve({ lat: -12.0464, lng: -77.0428 });
         return;
       }
@@ -68,10 +67,7 @@ const GoogleMapComponent = ({
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const userLoc = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
+          const userLoc = { lat: position.coords.latitude, lng: position.coords.longitude };
           console.log('🌍 ✅ Ubicación obtenida:', userLoc);
           setUserLocation(userLoc);
           setLocationStatus('granted');
@@ -80,81 +76,60 @@ const GoogleMapComponent = ({
         (error) => {
           console.warn('🌍 ❌ Error obteniendo ubicación:', error.message);
           setLocationStatus('denied');
-          
-          // Fallbacks según el tipo de error
+
           let fallbackLocation;
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              console.log('🌍 Permiso denegado, usando Madrid como fallback');
-              fallbackLocation = { lat: 40.4168, lng: -3.7038 }; // Madrid
+              fallbackLocation = { lat: 40.4168, lng: -3.7038 };
               break;
             case error.POSITION_UNAVAILABLE:
-              console.log('🌍 Posición no disponible, usando Barcelona como fallback');
-              fallbackLocation = { lat: 41.3851, lng: 2.1734 }; // Barcelona
+              fallbackLocation = { lat: 41.3851, lng: 2.1734 };
               break;
             case error.TIMEOUT:
-              console.log('🌍 Timeout, usando Valencia como fallback');
-              fallbackLocation = { lat: 39.4699, lng: -0.3763 }; // Valencia
+              fallbackLocation = { lat: 39.4699, lng: -0.3763 };
               break;
             default:
-              console.log('🌍 Error desconocido, usando Lima como fallback');
-              fallbackLocation = { lat: -12.0464, lng: -77.0428 }; // Lima
-              break;
+              fallbackLocation = { lat: -12.0464, lng: -77.0428 };
           }
-          
           setUserLocation(fallbackLocation);
           resolve(fallbackLocation);
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000, // 10 segundos
-          maximumAge: 300000 // 5 minutos
-        }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
       );
     });
   }, []);
 
   // Inicialización del mapa con manejo robusto de mapRef
   useEffect(() => {
-    if (!isMounted) {
-      return;
-    }
+    if (!isMounted) return;
 
-    console.log('🗺️ MAPA: Iniciando carga...', {
-      locations: locations.length,
-      apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'SÍ' : 'NO'
-    });
-    
+    console.log('🗺️ MAPA: Iniciando carga...', { locations: locations.length, apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'SÍ' : 'NO' });
+
     const waitForRefRobust = (): Promise<HTMLDivElement> => {
       return new Promise((resolve, reject) => {
         let attempts = 0;
-        const maxAttempts = 20; // 1 segundo máximo
-        
+        const maxAttempts = 20;
         const checkRef = () => {
           attempts++;
-          
           if (mapRef.current) {
-            console.log(`🎯 MapRef encontrado en intento #${attempts}`);
             resolve(mapRef.current);
-            return;
-          }
-          
-          if (attempts >= maxAttempts) {
-            console.error(`❌ MapRef no encontrado después de ${maxAttempts} intentos`);
+          } else if (attempts >= maxAttempts) {
             reject(new Error('MapRef no disponible después del timeout'));
-            return;
+          } else {
+            setTimeout(checkRef, 50);
           }
-          
-          console.log(`⏳ Esperando MapRef... intento ${attempts}/${maxAttempts}`);
-          setTimeout(checkRef, 50);
         };
-        
         checkRef();
       });
-    };    const initMap = async () => {
-      try {
+    };
+
+    const initMap = async () => {
+      try {        
         // Esperar a que el ref esté disponible con retry robusto
-        const mapElement = await waitForRefRobust();
+        await waitForRefRobust().catch(error => {
+          console.error('Error al esperar el ref:', error);
+          throw error;
+        });
         console.log('🗺️ MAPA: DOM listo, obteniendo ubicación...');
         
         // Obtener ubicación del usuario
@@ -276,20 +251,11 @@ const GoogleMapComponent = ({
       }
     };
 
-    // Solo inicializar si no tenemos mapa aún
     if (!map) {
-      // Timeout de seguridad por si algo falla
-      const timer = setTimeout(() => {
-        console.log('🗺️ MAPA: ⏰ Timeout - forzando fin de carga');
-        setIsLoading(false);
-        setHasError(true);
-      }, 15000); // 15 segundos
-      
-      initMap().finally(() => {
-        clearTimeout(timer);
-      });
+      const timer = setTimeout(() => { setIsLoading(false); setHasError(true); }, 15000);
+      initMap().finally(() => clearTimeout(timer));
     }
-  }, [isMounted, map]);
+  }, [isMounted, map]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const processLocations = useCallback(async () => {
     if (!map || !geocoder || !isMounted) {
@@ -449,8 +415,8 @@ const GoogleMapComponent = ({
       return;
     }
 
-    processLocations();
-  }, [map, geocoder, locations, processLocations]);
+    processLocations();  /* eslint-disable-line react-hooks/exhaustive-deps */
+  }, [map, geocoder, locations, processLocations, isMounted]);
 
   // Resaltar ubicación seleccionada
   useEffect(() => {
