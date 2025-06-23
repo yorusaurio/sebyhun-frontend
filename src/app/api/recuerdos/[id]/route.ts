@@ -6,9 +6,10 @@ const jsonHeaders = { 'Content-Type': 'application/json' };
 // Actualizar un recuerdo por ID
 export async function PUT(
   request: NextRequest, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = parseInt(params.id);
+  const { id: idParam } = await params;
+  const id = parseInt(idParam);
   const body = await request.json();
   const { userId, titulo, descripcion, ubicacion, fecha, imagen, latitud, longitud } = body;
   if (!userId) {
@@ -39,9 +40,10 @@ export async function PUT(
 // Eliminar un recuerdo por ID
 export async function DELETE(
   request: NextRequest, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = parseInt(params.id);
+  const { id: idParam } = await params;
+  const id = parseInt(idParam);
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
   if (!userId) {
