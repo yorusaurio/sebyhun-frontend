@@ -31,10 +31,8 @@ export default function EditarRecuerdo() {
     descripcion: "",
     ubicacion: "",
     fecha: "",
-    imagen: ""
-  });
-  const [recuerdo, setRecuerdo] = useState<Recuerdo | null>(null);
-    const [imageFile, setImageFile] = useState<File | null>(null);
+    imagen: ""  });
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);  const [errors, setErrors] = useState<Record<string, string>>({});
@@ -67,15 +65,12 @@ export default function EditarRecuerdo() {
           console.error('❌ No se encontró el recuerdo con ID:', recuerdoId);
           router.push("/home");
           return;
-        }
-
-        // LOG: Datos del recuerdo encontrado
+        }        // LOG: Datos del recuerdo encontrado
         console.log('✅ Recuerdo encontrado:', recuerdoEncontrado);
         console.log('📅 Fecha del recuerdo:', recuerdoEncontrado.fecha);
         console.log('📅 Tipo de fecha:', typeof recuerdoEncontrado.fecha);
         console.log('📅 Fecha como Date object:', new Date(recuerdoEncontrado.fecha));
 
-        setRecuerdo(recuerdoEncontrado);
         setFormData({
           titulo: recuerdoEncontrado.titulo,
           descripcion: recuerdoEncontrado.descripcion,
