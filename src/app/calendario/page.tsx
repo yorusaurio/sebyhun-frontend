@@ -20,6 +20,7 @@ import {
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { parseLocalDate, formatDateSafe, compareDates } from "@/utils/dateUtils";
 
 interface Recuerdo {
   id: number;
@@ -82,10 +83,10 @@ export default function CalendarioPage() {
       date.setDate(startDate.getDate() + i);
       
       const isCurrentMonth = date.getMonth() === month;
-      
-      // Buscar recuerdos para esta fecha
+        // Buscar recuerdos para esta fecha
       const dayRecuerdos = recuerdos.filter(recuerdo => {
-        const recuerdoDate = new Date(recuerdo.fecha);
+        const recuerdoDate = parseLocalDate(recuerdo.fecha);
+        console.log(`[Calendario] Comparando fecha del recuerdo "${recuerdo.titulo}": ${recuerdo.fecha} -> ${recuerdoDate.toISOString()} con día del calendario: ${date.toISOString()}`);
         return (
           recuerdoDate.getDate() === date.getDate() &&
           recuerdoDate.getMonth() === date.getMonth() &&
@@ -128,9 +129,10 @@ export default function CalendarioPage() {
   const handleRecuerdoClick = (recuerdo: Recuerdo) => {
     setSelectedRecuerdo(recuerdo);
   };
-
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    const date = parseLocalDate(dateString);
+    console.log(`[Calendario] Formateando fecha: ${dateString} -> ${date.toISOString()}`);
+    return date.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
@@ -314,10 +316,10 @@ export default function CalendarioPage() {
                   <span className="font-bold text-2xl text-pink-600">{recuerdos.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Este mes</span>
-                  <span className="font-bold text-xl text-indigo-600">
+                  <span className="text-gray-600">Este mes</span>                  <span className="font-bold text-xl text-indigo-600">
                     {recuerdos.filter(r => {
-                      const date = new Date(r.fecha);
+                      const date = parseLocalDate(r.fecha);
+                      console.log(`[Calendario-Stats] Verificando recuerdo "${r.titulo}" del ${r.fecha}: mes ${date.getMonth() + 1} vs ${currentDate.getMonth() + 1}`);
                       return date.getMonth() === currentDate.getMonth() && 
                              date.getFullYear() === currentDate.getFullYear();
                     }).length}
