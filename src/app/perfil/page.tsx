@@ -30,8 +30,7 @@ import {
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { recuerdosApi } from "@/lib/recuerdosApi";
-import type { Recuerdo } from "@/lib/fileStorage";
+import { recuerdosApi, type RecuerdoFrontend } from "@/lib/recuerdosApi";
 
 interface UserProfile {
   nombre: string;
@@ -93,7 +92,7 @@ export default function PerfilPage() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'sunset' | 'galaxy' | 'spring' | 'ocean'>('sunset');
 
-  const calcularEstadisticas = useCallback((recuerdos: Recuerdo[]) => {
+  const calcularEstadisticas = useCallback((recuerdos: RecuerdoFrontend[]) => {
     const ahora = new Date();
     const lugares = new Set(recuerdos.map(r => r.ubicacion));
     

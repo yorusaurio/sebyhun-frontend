@@ -21,24 +21,23 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { parseLocalDate} from "@/utils/dateUtils";
-import { recuerdosApi } from "@/lib/recuerdosApi";
-import type { Recuerdo } from "@/lib/fileStorage";
+import { recuerdosApi, type RecuerdoFrontend } from "@/lib/recuerdosApi";
 
 interface CalendarDay {
   date: Date;
   isCurrentMonth: boolean;
-  recuerdos: Recuerdo[];
+  recuerdos: RecuerdoFrontend[];
 }
 
 export default function CalendarioPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<RecuerdoFrontend[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
-  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [showMobileModal, setShowMobileModal] = useState(false);
-  const [selectedRecuerdo, setSelectedRecuerdo] = useState<Recuerdo | null>(null);
+  const [selectedRecuerdo, setSelectedRecuerdo] = useState<RecuerdoFrontend | null>(null);
 
   const monthNames = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -131,7 +130,7 @@ export default function CalendarioPage() {
     }
   };
 
-  const handleRecuerdoClick = (recuerdo: Recuerdo) => {
+  const handleRecuerdoClick = (recuerdo: RecuerdoFrontend) => {
     setSelectedRecuerdo(recuerdo);
   };
   const formatDate = (dateString: string) => {
@@ -143,10 +142,11 @@ export default function CalendarioPage() {
       year: 'numeric'
     });
   };
-
-  const handleEditRecuerdo = (id: number) => {
+  const handleEditRecuerdo = (id: string) => {
     router.push(`/editar-recuerdo/${id}`);
-  };  const handleDeleteRecuerdo = async (id: number) => {
+  };
+
+  const handleDeleteRecuerdo = async (id: string) => {
     try {
       await recuerdosApi.delete(id);
       const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);

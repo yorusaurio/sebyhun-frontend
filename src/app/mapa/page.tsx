@@ -26,8 +26,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import dynamic from 'next/dynamic';
 import { formatDateSafe, parseLocalDate, compareDates } from "@/utils/dateUtils";
-import { recuerdosApi } from "@/lib/recuerdosApi";
-import type { Recuerdo } from "@/lib/fileStorage";
+import { recuerdosApi, type RecuerdoFrontend } from "@/lib/recuerdosApi";
 import type { MapLocation } from "@/components/MapComponent";
 
 const GoogleMapComponent = dynamic(() => import("@/components/MapComponent"), {
@@ -39,11 +38,11 @@ const GoogleMapComponent = dynamic(() => import("@/components/MapComponent"), {
 
 export default function MapaPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<RecuerdoFrontend[]>([]);
   const [locations, setLocations] = useState<MapLocation[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
-  const [selectedRecuerdo, setSelectedRecuerdo] = useState<Recuerdo | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
+  const [selectedRecuerdo, setSelectedRecuerdo] = useState<RecuerdoFrontend | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<'map' | 'grid' | 'list'>('map');
   const [filterByYear, setFilterByYear] = useState<string>('all');
@@ -64,7 +63,7 @@ export default function MapaPage() {
         
         // Agrupar recuerdos por ubicación
         const locationMap = new Map<string, MapLocation>();
-        recuerdosData.forEach((recuerdo: Recuerdo) => {
+        recuerdosData.forEach((recuerdo: RecuerdoFrontend) => {
           const ubicacion = recuerdo.ubicacion;
           if (locationMap.has(ubicacion)) {
             locationMap.get(ubicacion)!.recuerdos.push(recuerdo);
@@ -88,7 +87,7 @@ export default function MapaPage() {
 
     cargarRecuerdos();
   }, [session, status, router]);
-  const handleDeleteRecuerdo = async (id: number) => {
+  const handleDeleteRecuerdo = async (id: string) => {
     try {
       await recuerdosApi.delete(id);
       const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
@@ -97,7 +96,7 @@ export default function MapaPage() {
       
       // Reagrupar ubicaciones
       const locationMap = new Map<string, MapLocation>();
-      nuevosRecuerdos.forEach((recuerdo: Recuerdo) => {
+      nuevosRecuerdos.forEach((recuerdo: RecuerdoFrontend) => {
         const ubicacion = recuerdo.ubicacion;
         if (locationMap.has(ubicacion)) {
           locationMap.get(ubicacion)!.recuerdos.push(recuerdo);
@@ -115,8 +114,7 @@ export default function MapaPage() {
       console.error('Error al eliminar recuerdo:', error);
       alert('Error al eliminar el recuerdo. Inténtalo de nuevo.');
     }  };
-
-  const handleEditRecuerdo = (id: number) => {
+  const handleEditRecuerdo = (id: string) => {
     router.push(`/editar-recuerdo/${id}`);
   };
 
@@ -124,7 +122,7 @@ export default function MapaPage() {
     setSelectedLocation(location);
   };
 
-  const handleRecuerdoClick = (recuerdo: Recuerdo) => {
+  const handleRecuerdoClick = (recuerdo: RecuerdoFrontend) => {
     setSelectedRecuerdo(recuerdo);
   };
   const formatDate = (dateString: string) => {

@@ -3,12 +3,26 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { MapPin, Heart } from 'lucide-react';
-import type { Recuerdo } from '@/lib/fileStorage';
+// Interfaz para el frontend (camelCase) - ACTUALIZADA PARA SPRING BOOT
+export interface RecuerdoFrontend {
+  id: string; // Cambiado de number a string para backend Spring Boot
+  userId: string;
+  titulo: string;
+  descripcion?: string;
+  ubicacion: string;
+  fecha: string;
+  imagen?: string;
+  imagenes?: string[]; // Soporte para múltiples imágenes
+  latitud?: number;
+  longitud?: number;
+  fechaCreacion?: string;
+  fechaActualizacion?: string;
+}
 
 export interface MapLocation {
   id: number;
   ubicacion: string;
-  recuerdos: Recuerdo[]; // ahora usa el tipo importado
+  recuerdos: RecuerdoFrontend[]; // ahora usa el tipo importado
   lat?: number;
   lng?: number;
 }

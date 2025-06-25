@@ -8,14 +8,13 @@ import Image from "next/image";
 import axios from "axios";
 import { Loader as GoogleMapsLoader } from "@googlemaps/js-api-loader";
 import { recuerdosApi } from "@/lib/recuerdosApi";
-import type { Recuerdo } from "@/lib/fileStorage";
 
 interface FormData {
   titulo: string;
-  descripcion: string;
+  descripcion?: string;
   ubicacion: string;
   fecha: string;
-  imagen: string;
+  imagen?: string;
   // Campos para datos de geolocalización
   latitud?: number;
   longitud?: number;
@@ -57,9 +56,8 @@ export default function EditarRecuerdo() {
     const cargarRecuerdo = async () => {
       try {
         console.log('📋 Cargando recuerdo para editar - ID:', recuerdoId);
-        
-        const recuerdos = await recuerdosApi.getAll();
-        const recuerdoEncontrado = recuerdos.find(r => r.id === parseInt(recuerdoId));
+          const recuerdos = await recuerdosApi.getAll();
+        const recuerdoEncontrado = recuerdos.find(r => r.id === recuerdoId);
         
         if (!recuerdoEncontrado) {
           console.error('❌ No se encontró el recuerdo con ID:', recuerdoId);
@@ -132,10 +130,9 @@ export default function EditarRecuerdo() {
     const newErrors: Record<string, string> = {};
     
     if (!formData.titulo.trim()) {
-      newErrors.titulo = "El título es obligatorio";
-    }
+      newErrors.titulo = "El título es obligatorio";    }
     
-    if (!formData.descripcion.trim()) {
+    if (!formData.descripcion?.trim()) {
       newErrors.descripcion = "La descripción es obligatoria";
     }
     
@@ -210,7 +207,7 @@ export default function EditarRecuerdo() {
         setIsUploading(false);
         console.log('✅ Nueva imagen subida:', imageUrl);
       }      // Actualizar el recuerdo usando la API
-      const recuerdoActualizado = await recuerdosApi.update(parseInt(recuerdoId), {
+      const recuerdoActualizado = await recuerdosApi.update(recuerdoId, {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         ubicacion: formData.ubicacion,

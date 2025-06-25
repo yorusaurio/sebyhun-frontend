@@ -8,15 +8,14 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { formatDateSafe, compareDates } from "@/utils/dateUtils";
-import { recuerdosApi } from "@/lib/recuerdosApi";
-import type { Recuerdo } from "@/lib/fileStorage";
+import { recuerdosApi, type RecuerdoFrontend } from "@/lib/recuerdosApi";
 
 export default function HomeRecuerdos() {
   const { data: session, status } = useSession();
-  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<Recuerdo[]>([]);
+  const router = useRouter();  const [recuerdos, setRecuerdos] = useState<RecuerdoFrontend[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
-  const [selectedRecuerdo, setSelectedRecuerdo] = useState<Recuerdo | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [selectedRecuerdo, setSelectedRecuerdo] = useState<RecuerdoFrontend | null>(null);
   useEffect(() => {
     if (status === "loading") return;
     
@@ -33,7 +32,7 @@ export default function HomeRecuerdos() {
         
         // LOG: Verificar fechas al cargar en HOME
         console.log('🏠 Cargando recuerdos en HOME desde API - Total:', recuerdosData.length);
-        recuerdosData.forEach((recuerdo: Recuerdo, index: number) => {
+        recuerdosData.forEach((recuerdo: RecuerdoFrontend, index: number) => {
           console.log(`📅 Recuerdo ${index + 1}:`, {
             id: recuerdo.id,
             titulo: recuerdo.titulo,
@@ -45,7 +44,7 @@ export default function HomeRecuerdos() {
         });
 
         // Ordenar por fecha descendente usando la función utilitaria segura
-        recuerdosData.sort((a: Recuerdo, b: Recuerdo) => 
+        recuerdosData.sort((a: RecuerdoFrontend, b: RecuerdoFrontend) => 
           compareDates(b.fecha, a.fecha)
         );
         
@@ -58,8 +57,7 @@ export default function HomeRecuerdos() {
     };
 
     cargarRecuerdos();
-  }, [session, status, router]);
-  const handleDeleteRecuerdo = async (id: number) => {
+  }, [session, status, router]);  const handleDeleteRecuerdo = async (id: string) => {
     try {
       await recuerdosApi.delete(id);
       const nuevosRecuerdos = recuerdos.filter(r => r.id !== id);
@@ -70,12 +68,11 @@ export default function HomeRecuerdos() {
       alert('Error al eliminar el recuerdo. Inténtalo de nuevo.');
     }
   };
-
-  const handleEditRecuerdo = (id: number) => {
+  const handleEditRecuerdo = (id: string) => {
     router.push(`/editar-recuerdo/${id}`);
   };
 
-  const handleRecuerdoClick = (recuerdo: Recuerdo) => {
+  const handleRecuerdoClick = (recuerdo: RecuerdoFrontend) => {
     setSelectedRecuerdo(recuerdo);
   };
 
