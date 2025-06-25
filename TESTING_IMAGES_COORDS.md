@@ -5,11 +5,19 @@
 ### 1. ✅ **Endpoint de Imágenes Configurado**
 - El frontend ahora usa `/api/images/upload` en lugar de ImgBB
 - Se adaptó la función `uploadImageToBackend()` para usar tu endpoint
+- **NUEVO**: Agregado logging detallado para diagnosticar problemas de subida
 
 ### 2. ✅ **Geocoding Implementado**
 - Se agregó función `geocodeAddress()` para obtener coordenadas automáticamente
 - Si el usuario escribe manualmente la ubicación, se obtienen las coordenadas via Google Geocoding API
 - Si usa Google Places autocomplete, las coordenadas vienen directamente
+- **NUEVO**: Mejorado el manejo de errores y validación de ubicaciones
+
+### 3. 🆕 **Debugging Mejorado**
+- La función `uploadImageToBackend()` ahora tiene logging detallado
+- Maneja diferentes formatos de respuesta del backend
+- Mejores mensajes de error para el usuario
+- Validación de URLs de imagen antes de enviar al backend
 
 ## 🧪 CÓMO PROBAR
 
@@ -120,3 +128,84 @@ curl -X GET "http://localhost:8080/api/recuerdos?userId=anonymous"
 ```
 
 ¡Ahora tanto las imágenes como las coordenadas deberían guardarse correctamente! 🎉
+
+## 🐛 DEBUGGING - PROBLEMAS COMUNES
+
+### 1. **Imagen se sube pero aparece como `null` en el recuerdo**
+
+**Causa**: El endpoint `/api/images/upload` no devuelve la URL en el formato esperado
+
+**Solución**: Ejecutar estas pruebas para verificar qué responde el backend:
+
+```bash
+# Crear imagen de prueba
+echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > test-image.png
+
+# Probar endpoint
+curl -X POST http://localhost:8080/api/images/upload \
+  -F "file=@test-image.png" \
+  -H "Content-Type: multipart/form-data" \
+  -v
+```
+
+**Respuestas esperadas**:
+- `"uploads/imagen123.jpg"` (string plano)
+- `{"url": "uploads/imagen123.jpg"}` (objeto con url)
+- `{"path": "uploads/imagen123.jpg"}` (objeto con path)
+
+**Logs del frontend** (en Developer Tools):
+- Buscar: `🔄 Subiendo imagen al backend...`
+- Buscar: `✅ Respuesta del backend:`
+- Buscar: `✅ URL de imagen obtenida:`
+
+### 2. **Error de CORS al subir imagen**
+
+**Solución**: Verificar que el backend tenga configurado CORS para:
+- `http://localhost:3000` (frontend)
+- Headers: `Content-Type`, `multipart/form-data`
+- Methods: `POST`
+
+### 3. **Imagen muy grande**
+
+**Solución**: Verificar límites en el backend:
+- Tamaño máximo de archivo
+- Timeout de la petición
+
+### 4. **Formato de imagen no soportado**
+
+**Solución**: El frontend solo acepta: `image/jpeg`, `image/png`, `image/gif`, `image/webp`
+
+## 🔍 COMANDOS DE DEBUGGING
+
+```bash
+# 1. Verificar el backend está corriendo
+curl http://localhost:8080/api/health
+
+# 2. Probar endpoint de imágenes
+curl -X POST http://localhost:8080/api/images/upload \
+  -F "file=@tu-imagen.jpg" \
+  -v
+
+# 3. Ver todos los recuerdos
+curl http://localhost:8080/api/recuerdos?userId=anonymous
+
+# 4. Ver un recuerdo específico
+curl http://localhost:8080/api/recuerdos/1
+```
+
+## 🚨 LOGS IMPORTANTES
+
+En la consola del navegador (F12 → Console), buscar:
+
+```javascript
+// Subida de imagen
+🔄 Subiendo imagen al backend...
+✅ Respuesta del backend: {...}
+✅ URL de imagen obtenida: uploads/...
+
+// Creación de recuerdo
+🚀 Datos del recuerdo a enviar al backend: {...}
+📦 Recuerdo creado mediante API: {...}
+```
+
+Si no ves estos logs, el proceso se está interrumpiendo antes.

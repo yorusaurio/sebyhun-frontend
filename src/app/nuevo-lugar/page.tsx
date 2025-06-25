@@ -294,6 +294,12 @@ export default function NuevoLugar() {
     formData.append('file', file);
     
     try {
+      console.log('🔄 Subiendo imagen al backend...', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
+      
       // Usar el endpoint del backend Spring Boot
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api'}/images/upload`,
@@ -305,13 +311,50 @@ export default function NuevoLugar() {
         }
       );
       
-      // Retornar la URL de la imagen desde el backend
-      return response.data.url || response.data;
+      console.log('✅ Respuesta completa del backend:', response);
+      console.log('📦 Datos de respuesta:', response.data);
+      console.log('🔍 Tipo de datos:', typeof response.data);
+      
+      // El backend devuelve { "url": "https://..." }
+      let imageUrl: string = '';
+      
+      if (response.data && typeof response.data === 'object' && response.data.url) {
+        imageUrl = response.data.url;
+        console.log('✅ URL extraída del objeto:', imageUrl);
+      } else if (typeof response.data === 'string') {
+        imageUrl = response.data;
+        console.log('✅ URL obtenida como string:', imageUrl);
+      } else {
+        console.error('❌ Formato de respuesta inesperado:', response.data);
+        throw new Error('El backend no devolvió una URL válida. Respuesta: ' + JSON.stringify(response.data));
+      }
+      
+      if (!imageUrl || imageUrl.trim() === '') {
+        console.error('❌ URL vacía o inválida:', imageUrl);
+        throw new Error('La URL de imagen está vacía o es inválida');
+      }
+      
+      // Validar que la URL sea válida
+      try {
+        new URL(imageUrl);
+        console.log('✅ URL válida confirmada:', imageUrl);
+      } catch {
+        console.error('❌ URL inválida:', imageUrl);
+        throw new Error('La URL devuelta no es válida: ' + imageUrl);
+      }
+      
+      return imageUrl;
+      
     } catch (error) {
-      console.error('Error uploading to backend:', error);
-      throw new Error('Error al subir la imagen');
+      console.error('❌ Error completo al subir imagen:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('❌ Status de error:', error.response?.status);
+        console.error('❌ Datos de error:', error.response?.data);
+        console.error('❌ Headers de error:', error.response?.headers);
+      }
+      throw new Error('Error al subir la imagen: ' + (error instanceof Error ? error.message : 'Error desconocido'));
     }
-  };  // Función para validar si la ubicación tiene coordenadas (fue seleccionada del autocompletado)
+  };// Función para validar si la ubicación tiene coordenadas (fue seleccionada del autocompletado)
   const validateLocationWithCoordinates = (ubicacion: string): boolean => {
     // Si tenemos coordenadas, la ubicación fue seleccionada correctamente
     if (formData.latitud && formData.longitud) {
@@ -398,14 +441,27 @@ export default function NuevoLugar() {
       console.log('  • Tipo de fecha:', typeof formData.fecha);
       console.log('  • Fecha convertida a Date:', new Date(formData.fecha));
       console.log('  • ImageFile presente:', !!imageFile);
+        let imageUrl = formData.imagen;
       
-      let imageUrl = formData.imagen;      // Subir imagen si hay una nueva
+      // Subir imagen si hay una nueva
       if (imageFile) {
         console.log('🖼️ Subiendo imagen...');
         setIsUploading(true);
-        imageUrl = await uploadImageToBackend(imageFile);
+        try {
+          imageUrl = await uploadImageToBackend(imageFile);
+          console.log('✅ Imagen subida exitosamente:', imageUrl);
+          
+          // Validar que la URL no esté vacía
+          if (!imageUrl || imageUrl.trim() === '') {
+            throw new Error('La URL de imagen está vacía');
+          }
+        } catch (uploadError) {
+          console.error('❌ Error al subir imagen:', uploadError);
+          setIsUploading(false);
+          alert('Error al subir la imagen: ' + (uploadError instanceof Error ? uploadError.message : 'Error desconocido'));
+          return;
+        }
         setIsUploading(false);
-        console.log('✅ Imagen subida:', imageUrl);
       }
 
       // Usar las coordenadas que ya tenemos del autocompletado
@@ -416,23 +472,29 @@ export default function NuevoLugar() {
       if (!finalLatitud || !finalLongitud) {
         throw new Error('Ubicación sin coordenadas. Por favor, selecciona una ubicación de las sugerencias.');
       }
-      
-      console.log('📍 Usando coordenadas del autocompletado:', {
+        console.log('📍 Usando coordenadas del autocompletado:', {
         latitud: finalLatitud,
         longitud: finalLongitud,
         ubicacion: formData.ubicacion
-      });// Crear el recuerdo usando la API  
-      const nuevoRecuerdo = await recuerdosApi.create({
+      });
+
+      // Preparar datos del recuerdo
+      const recuerdoData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         ubicacion: formData.ubicacion,
         fecha: formData.fecha,
-        imagen: imageUrl, // Imagen principal (para compatibilidad)
-        imagenes: imageUrl ? [imageUrl] : [], // Array de imágenes para el backend
+        imagen: imageUrl, // Campo principal de imagen para el backend
         latitud: finalLatitud,
         longitud: finalLongitud,
         userId: session?.user?.email || 'anonymous'
-      });
+      };
+      
+      console.log('🚀 Datos del recuerdo a enviar al backend:', recuerdoData);
+      console.log('🖼️ URL de imagen que se enviará:', imageUrl);
+
+      // Crear el recuerdo usando la API  
+      const nuevoRecuerdo = await recuerdosApi.create(recuerdoData);
       
       // LOG: Información del objeto que se guardó
       console.log('📦 Recuerdo creado mediante API:');

@@ -33,12 +33,12 @@ const convertToFrontend = (backendRecord: Recuerdo): RecuerdoFrontend => {
     descripcion: backendRecord.descripcion,
     ubicacion: backendRecord.ubicacion,
     fecha: backendRecord.fecha,
-    imagen: backendRecord.imagenes?.[0], // Primera imagen como imagen principal
-    imagenes: backendRecord.imagenes,
+    imagen: backendRecord.imagen, // Campo principal de imagen
+    imagenes: backendRecord.imagen ? [backendRecord.imagen] : [], // Convertir a array para compatibilidad frontend
     latitud: backendRecord.latitud,
     longitud: backendRecord.longitud,
-    fechaCreacion: backendRecord.createdAt,
-    fechaActualizacion: backendRecord.updatedAt
+    fechaCreacion: backendRecord.fechaCreacion,
+    fechaActualizacion: backendRecord.fechaActualizacion
   };
 };
 
@@ -50,7 +50,7 @@ const convertToBackend = (frontendRecord: Partial<RecuerdoFrontend>): Partial<Re
     ubicacion: frontendRecord.ubicacion,
     fecha: frontendRecord.fecha,
     userId: frontendRecord.userId,
-    imagenes: frontendRecord.imagenes || (frontendRecord.imagen ? [frontendRecord.imagen] : []),
+    imagen: frontendRecord.imagen || (frontendRecord.imagenes?.[0]), // Usar la primera imagen del array o la imagen principal
     latitud: frontendRecord.latitud,
     longitud: frontendRecord.longitud
   };

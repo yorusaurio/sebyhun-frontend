@@ -13,11 +13,11 @@ export interface Recuerdo {
   ubicacion: string;
   fecha: string; // YYYY-MM-DD
   userId: string;
-  imagenes?: string[]; // URLs de imágenes
+  imagen?: string; // URL de imagen principal
   latitud?: number;
   longitud?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  fechaCreacion?: string; // Nombre del campo que usa el backend
+  fechaActualizacion?: string; // Nombre del campo que usa el backend
 }
 
 export interface EstadisticasRecuerdos {
@@ -150,7 +150,7 @@ export const apiClient = {
   /**
    * Crear un nuevo recuerdo
    */
-  async crearRecuerdo(recuerdo: Omit<Recuerdo, 'id' | 'createdAt' | 'updatedAt'>): Promise<Recuerdo> {
+  async crearRecuerdo(recuerdo: Omit<Recuerdo, 'id' | 'fechaCreacion' | 'fechaActualizacion'>): Promise<Recuerdo> {
     return await makeRequest<Recuerdo>(ENDPOINTS.RECUERDOS, {
       method: 'POST',
       body: JSON.stringify(recuerdo),
@@ -160,7 +160,7 @@ export const apiClient = {
   /**
    * Actualizar un recuerdo existente
    */
-  async actualizarRecuerdo(id: string, recuerdo: Partial<Omit<Recuerdo, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Recuerdo> {
+  async actualizarRecuerdo(id: string, recuerdo: Partial<Omit<Recuerdo, 'id' | 'fechaCreacion' | 'fechaActualizacion'>>): Promise<Recuerdo> {
     return await makeRequest<Recuerdo>(ENDPOINTS.RECUERDO_BY_ID(id), {
       method: 'PUT',
       body: JSON.stringify(recuerdo),

@@ -24,13 +24,13 @@ export async function ejemploCrudBasico() {
 
     // 📝 Crear un nuevo recuerdo
     console.log('📝 Creando nuevo recuerdo...');
-    const nuevoRecuerdo: Omit<Recuerdo, 'id' | 'createdAt' | 'updatedAt'> = {
+    const nuevoRecuerdo: Omit<Recuerdo, 'id' | 'fechaCreacion' | 'fechaActualizacion'> = {
       userId: userId,
       titulo: 'Viaje a París',
       descripcion: 'Una experiencia increíble en la ciudad del amor',
       ubicacion: 'París, Francia',
       fecha: '2024-12-25',
-      imagenes: ['https://i.ibb.co/xyz/paris1.jpg', 'https://i.ibb.co/xyz/paris2.jpg'],
+      imagen: 'https://i.ibb.co/xyz/paris1.jpg', // Campo principal de imagen
       latitud: 48.8566,
       longitud: 2.3522
     };

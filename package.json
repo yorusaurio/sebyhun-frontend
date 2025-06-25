@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.8",
-    "@supabase/supabase-js": "^2.50.0",
     "axios": "^1.10.0",
     "cross-fetch": "^4.1.0",
     "lucide-react": "^0.522.0",
